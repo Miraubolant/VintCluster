@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { generateArticle } from "@/lib/openai";
+import { generateArticle, improveArticle, type ImprovementModel } from "@/lib/openai";
 import { generateImage, generateImagePrompt, type ImageModel } from "@/lib/replicate";
 import { generateSlug } from "@/lib/utils/slug";
 import { submitArticleToIndexNow, submitArticlesToIndexNow } from "@/lib/indexnow";
@@ -724,4 +724,88 @@ export async function bulkSubmitToIndexNow(
     submitted: result.submitted,
     errors: result.errors,
   };
+}
+
+// Améliorer un article avec l'IA
+export async function improveArticleWithAI(
+  articleId: string,
+  model: ImprovementModel
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  // Récupérer l'article existant
+  const { data: article, error: fetchError } = await supabase
+    .from("articles")
+    .select("id, title, content, summary, faq, status, site_id, slug")
+    .eq("id", articleId)
+    .single();
+
+  if (fetchError || !article) {
+    return { success: false, error: "Article non trouvé" };
+  }
+
+  try {
+    // Améliorer avec l'IA
+    const improved = await improveArticle(
+      {
+        title: article.title,
+        content: article.content,
+        summary: article.summary || "",
+        faq: (article.faq as { question: string; answer: string }[]) || [],
+      },
+      { model }
+    );
+
+    // Mettre à jour l'article (garder le même statut)
+    const { error: updateError } = await supabase
+      .from("articles")
+      .update({
+        title: improved.title,
+        content: improved.content,
+        summary: improved.summary,
+        faq: improved.faq as unknown as Json,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", articleId);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    // Logger l'activité
+    await supabase.from("activity_logs").insert({
+      site_id: article.site_id,
+      type: "article_improved",
+      message: `Article amélioré par IA (${model}): ${improved.title}`,
+      metadata: { article_id: articleId, model, original_title: article.title } as unknown as Json,
+    });
+
+    revalidatePath("/admin/articles");
+    revalidatePath(`/admin/articles/${articleId}`);
+
+    // Revalider les pages publiques si l'article est publié
+    if (article.status === "published") {
+      revalidatePath("/");
+      revalidatePath("/blog");
+      revalidatePath(`/blog/${article.slug}`);
+
+      // Soumettre à IndexNow car le contenu a changé
+      const { data: siteData } = await supabase
+        .from("sites")
+        .select("domain")
+        .eq("id", article.site_id)
+        .single();
+
+      if (siteData?.domain) {
+        submitArticleToIndexNow(article.slug, siteData.domain).catch((err) => {
+          console.error("IndexNow submission failed:", err);
+        });
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur d'amélioration";
+    return { success: false, error: message };
+  }
 }

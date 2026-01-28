@@ -50,10 +50,12 @@ import {
   bulkDeleteArticles,
   generateArticleImage,
   bulkSubmitToIndexNow,
+  improveArticleWithAI,
 } from "@/lib/actions/articles";
 import { getSites } from "@/lib/actions/sites";
 import { useBulkProgress } from "@/contexts/BulkProgressContext";
 import { MODEL_INFO, type ImageModel } from "@/lib/replicate";
+import { IMPROVEMENT_MODELS, type ImprovementModel } from "@/lib/openai";
 import { toast } from "sonner";
 import type { Site, Article, ArticleStatus } from "@/types/database";
 
@@ -102,6 +104,10 @@ export default function ArticlesPage() {
 
   // IndexNow submission
   const [indexNowLoading, setIndexNowLoading] = useState(false);
+
+  // AI Improvement dialog
+  const [improveDialogOpen, setImproveDialogOpen] = useState(false);
+  const [selectedAIModel, setSelectedAIModel] = useState<ImprovementModel>("gpt-4o");
 
   // Progress tracking
   const { progress, setProgress, isCancelled } = useBulkProgress();
@@ -305,6 +311,89 @@ export default function ArticlesPage() {
     setSelectedIds([]);
   }
 
+  async function handleBulkImproveArticles() {
+    if (selectedIds.length === 0) return;
+
+    setImproveDialogOpen(false);
+    cancelledRef.current = false;
+
+    // Get article titles for progress display
+    const selectedArticles = articles.filter(a => selectedIds.includes(a.id));
+
+    // Initialize progress
+    setProgress({
+      isRunning: true,
+      total: selectedIds.length,
+      completed: 0,
+      currentSite: null,
+      errors: [],
+      results: [],
+    });
+
+    // Improve articles one by one
+    for (let i = 0; i < selectedArticles.length; i++) {
+      const article = selectedArticles[i];
+
+      // Check if cancelled
+      if (cancelledRef.current) {
+        setProgress(prev => ({
+          ...prev,
+          errors: [...prev.errors, "Annulé par l'utilisateur"],
+        }));
+        break;
+      }
+
+      // Update current status
+      setProgress(prev => ({
+        ...prev,
+        currentSite: `Amélioration: ${article.title.substring(0, 35)}${article.title.length > 35 ? "..." : ""} (${i + 1}/${selectedIds.length})`,
+      }));
+
+      const result = await improveArticleWithAI(article.id, selectedAIModel);
+
+      // Check if cancelled after improvement
+      if (cancelledRef.current) {
+        if (result.success) {
+          setProgress(prev => ({
+            ...prev,
+            completed: prev.completed + 1,
+            results: [...prev.results, { siteName: article.site?.name || "Article", title: article.title }],
+            errors: [...prev.errors, "Annulé par l'utilisateur"],
+          }));
+        } else {
+          setProgress(prev => ({
+            ...prev,
+            errors: [...prev.errors, "Annulé par l'utilisateur"],
+          }));
+        }
+        break;
+      }
+
+      if (result.success) {
+        setProgress(prev => ({
+          ...prev,
+          completed: prev.completed + 1,
+          results: [...prev.results, { siteName: article.site?.name || "Article", title: article.title }],
+        }));
+      } else if (result.error) {
+        setProgress(prev => ({
+          ...prev,
+          errors: [...prev.errors, `${article.title.substring(0, 30)}: ${result.error}`],
+        }));
+      }
+    }
+
+    // Finalize
+    cancelledRef.current = false;
+    setProgress(prev => ({
+      ...prev,
+      isRunning: false,
+      currentSite: null,
+    }));
+    setSelectedIds([]);
+    loadData();
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -431,6 +520,16 @@ export default function ArticlesPage() {
               )}
               IndexNow
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImproveDialogOpen(true)}
+              disabled={bulkLoading || progress.isRunning}
+              className="text-amber-700 border-amber-300 hover:bg-amber-50"
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              Améliorer IA
+            </Button>
             <div className="w-px h-6 bg-gray-300 mx-1" />
             <Button
               variant="outline"
@@ -548,6 +647,62 @@ export default function ArticlesPage() {
             >
               <ImageIcon className="h-4 w-4 mr-2" />
               Régénérer {selectedIds.length} image(s)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog d'amélioration IA */}
+      <Dialog open={improveDialogOpen} onOpenChange={setImproveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Améliorer avec l'IA</DialogTitle>
+            <DialogDescription>
+              Améliorer {selectedIds.length} article(s) avec l'IA. Le titre, le contenu et la FAQ seront enrichis (2000-2500 mots).
+              Le statut actuel sera conservé.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Modèle IA</label>
+              <Select value={selectedAIModel} onValueChange={(value) => setSelectedAIModel(value as ImprovementModel)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(IMPROVEMENT_MODELS) as ImprovementModel[]).map((model) => (
+                    <SelectItem key={model} value={model}>
+                      <div className="flex items-center justify-between gap-4">
+                        <span>{IMPROVEMENT_MODELS[model].name}</span>
+                        <span className="text-xs text-gray-500">{IMPROVEMENT_MODELS[model].speed}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                {IMPROVEMENT_MODELS[selectedAIModel].description}
+              </p>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-xs text-amber-800">
+                <strong>Note:</strong> L'amélioration remplace le contenu original. Les articles seront enrichis avec une meilleure structure SEO, des FAQ plus complètes et des CTA vers nos produits.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImproveDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleBulkImproveArticles}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Améliorer {selectedIds.length} article(s)
             </Button>
           </DialogFooter>
         </DialogContent>

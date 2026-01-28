@@ -105,6 +105,8 @@ src/app/
 │   ├── loading.tsx          # Loading skeleton
 │   ├── error.tsx            # Page erreur
 │   ├── not-found.tsx        # Page 404
+│   ├── [key]/
+│   │   └── route.ts         # Fichier vérification IndexNow (/{key}.txt)
 │   └── blog/
 │       ├── page.tsx         # Liste paginée des articles
 │       └── [slug]/
@@ -254,6 +256,8 @@ src/
 │   │   ├── client.ts
 │   │   ├── generate-image.ts
 │   │   └── index.ts
+│   ├── indexnow/            # Indexation rapide
+│   │   └── index.ts         # API IndexNow (Bing, Yandex, etc.)
 │   └── validations/         # Schemas Zod
 │       └── index.ts
 ├── hooks/                   # React hooks custom
@@ -271,6 +275,7 @@ src/
 - `updateSite(id, data)` - Met à jour un site (+ revalidation cache auto)
 - `deleteSite(id)` - Supprime un site
 - `generateSiteSEO(siteName, siteId?)` - Génère meta_title/description avec IA
+- `generateFavicon(siteName, primaryColor, secondaryColor, siteId?)` - Génère favicon avec initiales
 
 ### Keywords (`lib/actions/keywords.ts`)
 - `getKeywords(filters)` - Liste avec filtres (siteId, status, search, globalOnly, includeGlobal)
@@ -303,6 +308,7 @@ interface ImageOptions {
 - `deleteArticle(id)` - Suppression
 - `bulkUpdateArticleStatus(ids, status)` - Mise à jour en masse du statut
 - `bulkDeleteArticles(ids)` - Suppression en masse
+- `bulkSubmitToIndexNow(ids)` - Soumet articles existants à IndexNow
 
 ### Scheduler (`lib/actions/scheduler.ts`)
 - `getSchedulerConfigs()` - Liste toutes les configurations scheduler
@@ -325,6 +331,7 @@ interface ImageOptions {
 
 ### Storage (`lib/supabase/storage.ts`)
 - `uploadImageFromUrl(imageUrl, siteId, filename?)` - Télécharge et stocke une image
+- `uploadBuffer(buffer, siteId, filename, contentType?)` - Upload un buffer (favicon généré)
 - `deleteImageFromStorage(imageUrl)` - Supprime une image du storage
 
 ## Variables d'Environnement
@@ -347,6 +354,9 @@ NEXT_PUBLIC_ADMIN_DOMAIN=admin.votredomaine.com
 # Secrets
 CRON_SECRET=xxx  # Pour sécuriser /api/cron/*
 REVALIDATION_SECRET=xxx  # Pour /api/revalidate
+
+# IndexNow (Bing, Yandex, Seznam, Naver)
+INDEXNOW_API_KEY=xxx  # Clé pour indexation rapide
 ```
 
 ## API Routes
@@ -493,6 +503,41 @@ Après ajout d'un nouveau site, si 404 persiste :
 | JSON-LD BreadcrumbList | ✅ | `src/app/(blog)/blog/[slug]/page.tsx` |
 | meta_title/description site | ✅ | Via admin + génération IA |
 | Favicon personnalisé | ✅ | Via admin (favicon_url par site) |
+| Favicon auto-généré | ✅ | Génération initiales via Sharp |
+| IndexNow | ✅ | `src/lib/indexnow/index.ts` |
+
+### IndexNow (Indexation Rapide)
+
+Intégration IndexNow pour notifier instantanément Bing, Yandex, Seznam et Naver des nouveaux articles :
+
+```typescript
+// Fichiers concernés
+src/lib/indexnow/index.ts          // Utilitaires soumission
+src/app/(blog)/[key]/route.ts      // Fichier vérification /{key}.txt
+
+// Fonctions disponibles
+submitToIndexNow(urls[], host)                    // Soumet URLs à IndexNow
+submitArticleToIndexNow(slug, domain)             // Soumet un article
+submitArticlesToIndexNow(articles[])              // Soumet plusieurs articles
+submitSiteToIndexNow(domain)                      // Soumet homepage + sitemap
+```
+
+**Comportement automatique** :
+- Publication article → Auto-soumission IndexNow
+- Publication en masse → Soumission groupée par domaine
+
+**Action manuelle** :
+- Bouton "IndexNow" dans les actions groupées de la page articles
+
+### Génération Favicon Automatique
+
+Génération de favicon avec les initiales du site via Sharp :
+
+```typescript
+// src/lib/actions/sites.ts
+generateFavicon(siteName, primaryColor, secondaryColor, siteId?)
+// Crée un SVG avec initiales → convertit en PNG → upload Supabase Storage
+```
 
 ### Génération SEO IA
 
