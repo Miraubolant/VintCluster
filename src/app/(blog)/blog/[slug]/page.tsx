@@ -10,6 +10,9 @@ import {
 } from "@/lib/actions/blog";
 import { ArticleContent, ArticleCard } from "@/components/blog";
 
+// Force dynamic rendering because we use headers() for multi-tenant domain detection
+export const dynamic = "force-dynamic";
+
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
 }
@@ -49,13 +52,6 @@ export async function generateMetadata({
       images: article.image_url ? [article.image_url] : undefined,
     },
   };
-}
-
-// Générer les pages statiques pour ISR
-export async function generateStaticParams() {
-  // Cette fonction est appelée au build time
-  // En production, on peut pré-générer les articles les plus récents
-  return [];
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
