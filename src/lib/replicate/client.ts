@@ -8,7 +8,11 @@ export function getReplicateClient(): Replicate {
     if (!apiToken) {
       throw new Error("REPLICATE_API_TOKEN is not defined");
     }
-    replicateClient = new Replicate({ auth: apiToken });
+    // Désactiver FileOutput pour recevoir des URLs directes au lieu de ReadableStream
+    replicateClient = new Replicate({
+      auth: apiToken,
+      useFileOutput: false,
+    });
   }
   return replicateClient;
 }

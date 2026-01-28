@@ -87,34 +87,15 @@ export async function generateImage(
       });
     }
 
-    // Le résultat peut être un tableau ou une URL directe
-    // Les nouvelles versions du SDK Replicate retournent des FileOutput (ReadableStream)
-    const rawOutput = Array.isArray(output) ? output[0] : output;
+    // Avec useFileOutput: false, on reçoit directement des URLs string
+    const tempImageUrl = Array.isArray(output) ? output[0] : output;
 
-    let tempImageUrl: string | null = null;
-
-    if (typeof rawOutput === "string") {
-      // Cas simple: URL directe
-      tempImageUrl = rawOutput;
-    } else if (rawOutput && typeof rawOutput === "object") {
-      // Cas FileOutput/ReadableStream - essayer d'obtenir l'URL
-      const fileOutput = rawOutput as { url?: () => Promise<string> | string; toString?: () => string };
-
-      if (typeof fileOutput.url === "function") {
-        // FileOutput avec méthode url()
-        const urlResult = fileOutput.url();
-        tempImageUrl = urlResult instanceof Promise ? await urlResult : urlResult;
-      } else if (typeof fileOutput.toString === "function" && fileOutput.toString() !== "[object Object]") {
-        tempImageUrl = fileOutput.toString();
-      }
-    }
-
-    if (!tempImageUrl) {
-      console.error("No image URL returned from Replicate. Output type:", typeof rawOutput, "Value:", rawOutput);
+    if (!tempImageUrl || typeof tempImageUrl !== "string") {
+      console.error("No image URL returned from Replicate. Output:", JSON.stringify(output));
       return null;
     }
 
-    console.log("Image generated successfully, URL obtained:", tempImageUrl.substring(0, 50) + "...");
+    console.log("Image generated successfully, URL:", tempImageUrl.substring(0, 60) + "...");
 
     // Si un siteId est fourni, persister l'image dans Supabase Storage
     let finalImageUrl = tempImageUrl;
