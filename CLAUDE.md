@@ -143,8 +143,10 @@ CREATE TABLE sites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   domain TEXT NOT NULL UNIQUE,
+  logo_url TEXT,                        -- URL du logo (optionnel)
   primary_color TEXT DEFAULT '#FFE500',
   secondary_color TEXT DEFAULT '#000000',
+  meta_title TEXT,                      -- Titre SEO (optionnel)
   meta_description TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -257,10 +259,12 @@ src/
 
 ### Sites (`lib/actions/sites.ts`)
 - `getSites()` - Liste tous les sites
+- `getSitesWithStats()` - Liste avec compteurs (keywords, articles)
 - `getSiteById(id)` - Récupère un site
 - `createSite(data)` - Crée un site
-- `updateSite(id, data)` - Met à jour un site
+- `updateSite(id, data)` - Met à jour un site (+ revalidation cache auto)
 - `deleteSite(id)` - Supprime un site
+- `generateSiteSEO(siteName, siteId?)` - Génère meta_title/description avec IA
 
 ### Keywords (`lib/actions/keywords.ts`)
 - `getKeywords(filters)` - Liste avec filtres (siteId, status, search, globalOnly, includeGlobal)
@@ -438,6 +442,40 @@ Après ajout d'un nouveau site, si 404 persiste :
 2. Ou redémarrer le conteneur dans Coolify
 3. Ou appeler `/api/revalidate?secret=XXX&tag=sites`
 
+## SEO
+
+### Fonctionnalités SEO
+
+| Fonctionnalité | Status | Fichiers |
+|----------------|--------|----------|
+| Sitemap dynamique | ✅ | `src/app/sitemap.ts` |
+| robots.txt dynamique | ✅ | `src/app/robots.ts` |
+| URLs canoniques | ✅ | Toutes les pages blog |
+| OpenGraph complet | ✅ | Toutes les pages blog |
+| Twitter Cards | ✅ | Toutes les pages blog |
+| JSON-LD Article | ✅ | `src/app/(blog)/blog/[slug]/page.tsx` |
+| JSON-LD FAQPage | ✅ | `src/app/(blog)/blog/[slug]/page.tsx` |
+| JSON-LD BreadcrumbList | ✅ | `src/app/(blog)/blog/[slug]/page.tsx` |
+| meta_title/description site | ✅ | Via admin + génération IA |
+
+### Génération SEO IA
+
+Les sites peuvent générer automatiquement leur `meta_title` et `meta_description` via OpenAI :
+
+```typescript
+// src/lib/actions/sites.ts
+generateSiteSEO(siteName: string, siteId?: string)
+// Prend en compte le nom du site + ses keywords associés
+```
+
+### Métadonnées par page
+
+| Page | metadataBase | canonical | OpenGraph | Twitter | JSON-LD |
+|------|--------------|-----------|-----------|---------|---------|
+| `/` (home) | ✅ | `/` | website, siteName, locale, images | summary | - |
+| `/blog` | ✅ | `/blog` | website, siteName, locale, images | summary | - |
+| `/blog/[slug]` | ✅ | `/blog/[slug]` | article, publishedTime, modifiedTime, images | summary_large_image | Article, FAQPage, BreadcrumbList |
+
 ## Notes Importantes
 
 - **Next.js 16** : Utilise Turbopack, `unstable_cache` pour le caching
@@ -452,6 +490,26 @@ Après ajout d'un nouveau site, si 404 persiste :
 - **Debug** : Endpoints `/api/debug-*` pour diagnostiquer les problèmes (domain, article, page, render)
 - **Bulk Actions** : La page articles supporte la sélection multiple et les actions en masse
 - **Error Boundaries** : `error.tsx` dans les routes pour capturer et afficher les erreurs de rendu
+
+## Audit & Issues Connues
+
+### Issues Critiques à Corriger
+
+1. **JSON.parse sans try-catch** (`sites.ts:250`) - Risque d'erreur si OpenAI retourne du JSON invalide
+2. **Debug routes sans auth** - Les endpoints `/api/debug-*` sont accessibles publiquement
+
+### Warnings
+
+1. **Type casting excessif** - 13 occurrences de `as unknown as` dans le code
+2. **console.log en production** - 7 occurrences à remplacer par du logging structuré
+3. **Pas de rate limiting** - Sur les endpoints API cron
+4. **Pas de limite sur bulk operations** - Risque de timeout avec trop d'éléments
+
+### Suggestions
+
+1. **Code dupliqué** - `generateSlug()` existe dans `articles.ts` et `generate-article.ts`
+2. **Types dupliqués** - `ArticleWithKeyword`, `ArticleWithDetails`, `KeywordWithSite` à consolider
+3. **Produits hardcodés** - URLs des produits Vint* à externaliser en config
 
 ## Migration SQL
 
