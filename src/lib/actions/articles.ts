@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { generateArticle } from "@/lib/openai";
 import { generateImage, generateImagePrompt, type ImageModel } from "@/lib/replicate";
 import { generateSlug } from "@/lib/utils/slug";
+import { submitArticleToIndexNow, submitArticlesToIndexNow } from "@/lib/indexnow";
 import type { Article, ArticleStatus, Json } from "@/types/database";
 
 // Options pour la génération d'image
@@ -209,16 +210,17 @@ export async function updateArticleStatus(
 
   const updateData: { status: ArticleStatus; published_at?: string | null } = { status };
 
+  // Récupérer l'article avec le site pour IndexNow
+  const { data: article } = await supabase
+    .from("articles")
+    .select("keyword_id, slug, site:sites(domain)")
+    .eq("id", id)
+    .single();
+
   if (status === "published") {
     updateData.published_at = new Date().toISOString();
 
     // Mettre à jour le mot-clé associé
-    const { data: article } = await supabase
-      .from("articles")
-      .select("keyword_id")
-      .eq("id", id)
-      .single();
-
     if (article?.keyword_id) {
       await supabase
         .from("keywords")
@@ -244,6 +246,14 @@ export async function updateArticleStatus(
     revalidatePath("/");
     revalidatePath("/blog");
     revalidatePath("/blog/[slug]", "page");
+
+    // Soumettre à IndexNow pour indexation rapide
+    const site = article?.site as { domain: string } | null;
+    if (site?.domain && article?.slug) {
+      submitArticleToIndexNow(article.slug, site.domain).catch((err) => {
+        console.error("IndexNow submission failed:", err);
+      });
+    }
   }
 
   return { success: true };
@@ -282,11 +292,11 @@ export async function bulkUpdateArticleStatus(
     return { success: false, count: 0, error: error.message };
   }
 
-  // Si publication, mettre à jour les mots-clés associés
+  // Si publication, mettre à jour les mots-clés associés et soumettre à IndexNow
   if (status === "published") {
     const { data: articles } = await supabase
       .from("articles")
-      .select("keyword_id")
+      .select("keyword_id, slug, site:sites(domain)")
       .in("id", ids);
 
     const keywordIds = articles
@@ -298,6 +308,22 @@ export async function bulkUpdateArticleStatus(
         .from("keywords")
         .update({ status: "published" })
         .in("id", keywordIds);
+    }
+
+    // Soumettre à IndexNow pour indexation rapide
+    if (articles && articles.length > 0) {
+      const articlesToSubmit = articles
+        .filter((a) => a.slug && (a.site as { domain: string } | null)?.domain)
+        .map((a) => ({
+          slug: a.slug,
+          domain: (a.site as { domain: string }).domain,
+        }));
+
+      if (articlesToSubmit.length > 0) {
+        submitArticlesToIndexNow(articlesToSubmit).catch((err) => {
+          console.error("IndexNow bulk submission failed:", err);
+        });
+      }
     }
 
     revalidatePath("/");
@@ -651,4 +677,51 @@ export async function generateArticleImage(
     const message = error instanceof Error ? error.message : "Erreur de génération";
     return { error: message };
   }
+}
+
+// Soumettre des articles publiés à IndexNow (pour articles existants)
+export async function bulkSubmitToIndexNow(
+  ids: string[]
+): Promise<{ success: boolean; submitted: number; errors: string[] }> {
+  if (ids.length === 0) {
+    return { success: false, submitted: 0, errors: ["Aucun article sélectionné"] };
+  }
+
+  const supabase = await createClient();
+
+  // Récupérer les articles publiés avec leur site
+  const { data: articles, error } = await supabase
+    .from("articles")
+    .select("id, slug, status, site:sites(domain)")
+    .in("id", ids)
+    .eq("status", "published");
+
+  if (error) {
+    return { success: false, submitted: 0, errors: [error.message] };
+  }
+
+  if (!articles || articles.length === 0) {
+    return { success: false, submitted: 0, errors: ["Aucun article publié trouvé parmi la sélection"] };
+  }
+
+  // Préparer les articles pour IndexNow
+  const articlesToSubmit = articles
+    .filter((a) => a.slug && (a.site as { domain: string } | null)?.domain)
+    .map((a) => ({
+      slug: a.slug,
+      domain: (a.site as { domain: string }).domain,
+    }));
+
+  if (articlesToSubmit.length === 0) {
+    return { success: false, submitted: 0, errors: ["Aucun article valide à soumettre"] };
+  }
+
+  // Soumettre à IndexNow
+  const result = await submitArticlesToIndexNow(articlesToSubmit);
+
+  return {
+    success: result.success,
+    submitted: result.submitted,
+    errors: result.errors,
+  };
 }

@@ -32,6 +32,7 @@ import {
   XCircle,
   ImageIcon,
   Loader2,
+  Send,
 } from "lucide-react";
 import {
   ArticlesStats,
@@ -48,6 +49,7 @@ import {
   bulkUpdateArticleStatus,
   bulkDeleteArticles,
   generateArticleImage,
+  bulkSubmitToIndexNow,
 } from "@/lib/actions/articles";
 import { getSites } from "@/lib/actions/sites";
 import { useBulkProgress } from "@/contexts/BulkProgressContext";
@@ -97,6 +99,9 @@ export default function ArticlesPage() {
   // Regenerate images dialog
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ImageModel>("flux-schnell");
+
+  // IndexNow submission
+  const [indexNowLoading, setIndexNowLoading] = useState(false);
 
   // Progress tracking
   const { progress, setProgress, isCancelled } = useBulkProgress();
@@ -272,6 +277,34 @@ export default function ArticlesPage() {
     loadData();
   }
 
+  async function handleBulkIndexNow() {
+    if (selectedIds.length === 0) return;
+
+    // Vérifier qu'il y a des articles publiés
+    const publishedCount = articles.filter(
+      (a) => selectedIds.includes(a.id) && a.status === "published"
+    ).length;
+
+    if (publishedCount === 0) {
+      toast.error("Seuls les articles publiés peuvent être soumis à IndexNow");
+      return;
+    }
+
+    setIndexNowLoading(true);
+    const result = await bulkSubmitToIndexNow(selectedIds);
+    setIndexNowLoading(false);
+
+    if (result.errors.length > 0) {
+      result.errors.forEach((err) => toast.error(err));
+    }
+
+    if (result.submitted > 0) {
+      toast.success(`${result.submitted} article(s) soumis à IndexNow`);
+    }
+
+    setSelectedIds([]);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -383,6 +416,20 @@ export default function ArticlesPage() {
             >
               <ImageIcon className="h-4 w-4 mr-1" />
               Régénérer images
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkIndexNow}
+              disabled={bulkLoading || progress.isRunning || indexNowLoading}
+              className="text-cyan-700 border-cyan-300 hover:bg-cyan-50"
+            >
+              {indexNowLoading ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-1" />
+              )}
+              IndexNow
             </Button>
             <div className="w-px h-6 bg-gray-300 mx-1" />
             <Button
