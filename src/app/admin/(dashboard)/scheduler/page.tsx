@@ -12,6 +12,7 @@ import {
   getSchedulerConfigs,
   getSchedulerStats,
   toggleSchedulerEnabled,
+  runSchedulerManually,
 } from "@/lib/actions/scheduler";
 import { getSites } from "@/lib/actions/sites";
 import { toast } from "sonner";
@@ -37,6 +38,7 @@ export default function SchedulerPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<SchedulerConfigWithSite | null>(null);
+  const [runningSiteId, setRunningSiteId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -64,6 +66,20 @@ export default function SchedulerPage() {
       return;
     }
     toast.success(enabled ? "Scheduler activé" : "Scheduler désactivé");
+    loadData();
+  }
+
+  async function handleRunManually(siteId: string) {
+    setRunningSiteId(siteId);
+    const result = await runSchedulerManually(siteId);
+    setRunningSiteId(null);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success(`Article généré: ${result.articleTitle}`);
     loadData();
   }
 
@@ -141,6 +157,8 @@ export default function SchedulerPage() {
                 config={config}
                 onToggle={handleToggle}
                 onEdit={handleEdit}
+                onRunManually={handleRunManually}
+                isRunning={runningSiteId === config.site_id}
               />
             ))}
           </div>

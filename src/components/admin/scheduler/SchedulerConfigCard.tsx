@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Settings, ChevronDown, ChevronUp, ImageIcon, Tag } from "lucide-react";
+import { Settings, ChevronDown, ChevronUp, ImageIcon, Tag, Play, Loader2 } from "lucide-react";
 import type { SchedulerConfig } from "@/types/database";
 
 interface SchedulerConfigWithSite extends SchedulerConfig {
@@ -19,6 +19,8 @@ interface SchedulerConfigCardProps {
   config: SchedulerConfigWithSite;
   onToggle: (siteId: string, enabled: boolean) => void;
   onEdit: (config: SchedulerConfigWithSite) => void;
+  onRunManually: (siteId: string) => Promise<void>;
+  isRunning?: boolean;
 }
 
 const DAYS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -27,12 +29,15 @@ export function SchedulerConfigCard({
   config,
   onToggle,
   onEdit,
+  onRunManually,
+  isRunning = false,
 }: SchedulerConfigCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const keywordIds = (config.keyword_ids as string[]) || [];
+  const hasKeywords = keywordIds.length > 0;
 
   const daysOfWeek = (config.days_of_week as number[]) || [];
   const publishHours = (config.publish_hours as number[]) || [];
-  const keywordIds = (config.keyword_ids as string[]) || [];
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -58,6 +63,21 @@ export function SchedulerConfigCard({
           ) : (
             <Badge variant="secondary">Inactif</Badge>
           )}
+
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => onRunManually(config.site_id)}
+            disabled={isRunning || !hasKeywords}
+            className="bg-green-600 hover:bg-green-700 text-white"
+            title={!hasKeywords ? "Aucun mot-clé sélectionné" : "Lancer une génération maintenant"}
+          >
+            {isRunning ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+          </Button>
 
           <Button
             variant="ghost"
