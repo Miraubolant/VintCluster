@@ -103,8 +103,10 @@ src/app/
 │   ├── layout.tsx           # Layout admin avec sidebar
 │   ├── page.tsx             # Dashboard stats
 │   ├── sites/               # CRUD sites
+│   │   └── [id]/            # Détail/édition site
 │   ├── keywords/            # Import/gestion mots-clés
 │   ├── articles/            # Gestion articles générés
+│   │   └── [id]/            # Page édition article (EditArticleForm)
 │   ├── scheduler/           # Configuration publication auto
 │   ├── logs/                # Historique activité
 │   ├── settings/            # Paramètres
@@ -266,9 +268,11 @@ src/
 - `updateArticleStatus(id, status)` - Publication
 - `updateArticle(id, data)` - Modification
 - `deleteArticle(id)` - Suppression
+- `bulkUpdateArticleStatus(ids, status)` - Mise à jour en masse du statut
+- `bulkDeleteArticles(ids)` - Suppression en masse
 
 ### Blog Public (`lib/actions/blog.ts`)
-- `getSiteByDomain(domain)` - Site par domaine (cached 1h)
+- `getSiteByDomain(domain)` - Site par domaine (cached 60s, gère www automatiquement)
 - `getPublishedArticles(siteId, limit, offset)` - Articles publiés (cached 60s)
 - `getArticleBySlug(siteId, slug)` - Article par slug (cached 60s)
 - `getPublishedArticlesCount(siteId)` - Compte articles
@@ -323,6 +327,13 @@ GET /api/health
 # Response: {"status": "healthy", "timestamp": "..."}
 ```
 
+### Debug Domain (temporaire)
+```bash
+GET /api/debug-domain
+# Affiche les headers, le domaine détecté et les sites en DB
+# Utile pour diagnostiquer les problèmes de multi-tenant
+```
+
 ## Commandes
 
 ```bash
@@ -373,14 +384,49 @@ docker-compose up -d
 
 Voir [DEPLOY.md](./DEPLOY.md) pour les instructions Coolify.
 
+### Configuration Docker Multi-Stage
+
+Le Dockerfile utilise 3 stages pour optimiser l'image :
+
+```dockerfile
+# Stage 1: deps - Installation des dépendances (incluant devDeps pour TypeScript)
+# Stage 2: builder - Build Next.js avec standalone output
+# Stage 3: runner - Image de production minimale
+
+# Points importants :
+- npm ci (pas --only=production) pour avoir TypeScript au build
+- Dossier public/ doit exister (même avec juste .gitkeep)
+- Permissions cache : mkdir -p .next/cache && chown -R nextjs:nodejs .next
+- User non-root : nextjs (uid 1001)
+```
+
+### Configuration Multi-Domaines Coolify
+
+Dans Coolify, séparer les domaines par des virgules sans espaces :
+```
+https://admin.monsite.com,https://blog1.com,https://blog2.com
+```
+
+Chaque domaine doit correspondre exactement à la colonne `domain` dans la table `sites` (sans https://, sans www).
+
+### Troubleshooting Cache
+
+Après ajout d'un nouveau site, si 404 persiste :
+1. Attendre 60 secondes (expiration cache)
+2. Ou redémarrer le conteneur dans Coolify
+3. Ou appeler `/api/revalidate?secret=XXX&tag=sites`
+
 ## Notes Importantes
 
 - **Next.js 16** : Utilise Turbopack, `unstable_cache` pour le caching
 - **Multi-tenant** : Détection domaine via header `x-current-host` injecté par middleware
-- **ISR** : Cache 60s pour articles, 1h pour sites, revalidation on-demand
+- **ISR** : Cache 60s pour articles et sites, revalidation on-demand via tag "sites" ou "articles"
 - **Sécurité** : Routes admin protégées, CRON_SECRET pour les endpoints cron
 - **Types** : Casting `as unknown as Type` nécessaire pour les champs JSONB (faq, metadata)
 - **Keywords globaux** : Les mots-clés avec `site_id = NULL` peuvent être utilisés pour générer des articles sur n'importe quel site
+- **Gestion www** : Le domaine est normalisé (www supprimé) pour correspondance avec la DB
+- **Debug** : Endpoint `/api/debug-domain` pour diagnostiquer les problèmes de domaine
+- **Bulk Actions** : La page articles supporte la sélection multiple et les actions en masse
 
 ## Migration SQL
 
