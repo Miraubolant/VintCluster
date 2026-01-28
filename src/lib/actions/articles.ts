@@ -370,6 +370,8 @@ export async function updateArticle(
     content?: string;
     summary?: string;
     faq?: { question: string; answer: string }[];
+    image_url?: string | null;
+    image_alt?: string | null;
   }
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
@@ -586,6 +588,61 @@ export async function generateArticleFromTopic(
 
     revalidatePath("/admin/articles");
     return { data: article as Article };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur de génération";
+    return { error: message };
+  }
+}
+
+// Générer une image pour un article existant
+export async function generateArticleImage(
+  articleId: string,
+  model: ImageModel = "flux-schnell",
+  customPrompt?: string
+): Promise<{ url?: string; alt?: string; error?: string }> {
+  const supabase = await createClient();
+
+  // Récupérer l'article
+  const { data: article, error: fetchError } = await supabase
+    .from("articles")
+    .select("title, keyword:keywords(keyword)")
+    .eq("id", articleId)
+    .single();
+
+  if (fetchError || !article) {
+    return { error: "Article non trouvé" };
+  }
+
+  try {
+    // Générer le prompt à partir du titre ou utiliser le prompt personnalisé
+    const keyword = (article.keyword as { keyword: string } | null)?.keyword;
+    const prompt = customPrompt || generateImagePrompt(article.title, keyword);
+
+    // Générer l'image
+    const image = await generateImage(prompt, model);
+
+    if (!image) {
+      return { error: "Échec de la génération d'image" };
+    }
+
+    // Mettre à jour l'article avec la nouvelle image
+    const { error: updateError } = await supabase
+      .from("articles")
+      .update({
+        image_url: image.url,
+        image_alt: image.alt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", articleId);
+
+    if (updateError) {
+      return { error: updateError.message };
+    }
+
+    revalidatePath("/admin/articles");
+    revalidatePath(`/admin/articles/${articleId}`);
+
+    return { url: image.url, alt: image.alt };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur de génération";
     return { error: message };

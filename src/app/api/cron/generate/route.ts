@@ -72,11 +72,19 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Récupérer un mot-clé pending pour ce site
+      // Récupérer les keyword_ids configurés pour ce scheduler
+      const keywordIds = (config.keyword_ids as string[]) || [];
+
+      // Si aucun keyword n'est sélectionné, passer au suivant
+      if (keywordIds.length === 0) {
+        continue;
+      }
+
+      // Récupérer un mot-clé pending parmi ceux sélectionnés
       const { data: keyword, error: keywordError } = await supabase
         .from("keywords")
         .select("*")
-        .eq("site_id", config.site_id)
+        .in("id", keywordIds)
         .eq("status", "pending")
         .order("priority", { ascending: false })
         .limit(1)

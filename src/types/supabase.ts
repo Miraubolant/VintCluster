@@ -200,6 +200,7 @@ export type Database = {
           days_of_week: number[] | null
           enabled: boolean | null
           id: string
+          keyword_ids: string[] | null
           max_per_day: number | null
           max_per_week: number | null
           publish_hours: number[] | null
@@ -212,6 +213,7 @@ export type Database = {
           days_of_week?: number[] | null
           enabled?: boolean | null
           id?: string
+          keyword_ids?: string[] | null
           max_per_day?: number | null
           max_per_week?: number | null
           publish_hours?: number[] | null
@@ -224,6 +226,7 @@ export type Database = {
           days_of_week?: number[] | null
           enabled?: boolean | null
           id?: string
+          keyword_ids?: string[] | null
           max_per_day?: number | null
           max_per_week?: number | null
           publish_hours?: number[] | null

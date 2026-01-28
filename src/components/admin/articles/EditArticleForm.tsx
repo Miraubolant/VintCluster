@@ -2,13 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Save, Eye, Plus, Trash2 } from "lucide-react";
-import { updateArticle } from "@/lib/actions/articles";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Save, Eye, Plus, Trash2, ImageIcon, Sparkles, X } from "lucide-react";
+import { updateArticle, generateArticleImage } from "@/lib/actions/articles";
+import { MODEL_INFO, type ImageModel } from "@/lib/replicate";
 import { toast } from "sonner";
 import type { Article, FAQItem } from "@/types/database";
 import ReactMarkdown from "react-markdown";
@@ -35,10 +44,15 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
   const [title, setTitle] = useState(article.title);
   const [summary, setSummary] = useState(article.summary || "");
   const [content, setContent] = useState(article.content);
+  const [imageUrl, setImageUrl] = useState(article.image_url || "");
+  const [imageAlt, setImageAlt] = useState(article.image_alt || "");
   const [faq, setFaq] = useState<FAQItem[]>(
     (article.faq as FAQItem[] | null) || []
   );
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
+  const [imageModel, setImageModel] = useState<ImageModel>("flux-schnell");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,6 +68,8 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
       summary: summary.trim() || undefined,
       content: content.trim(),
       faq: faq.length > 0 ? faq : undefined,
+      image_url: imageUrl.trim() || null,
+      image_alt: imageAlt.trim() || null,
     });
     setLoading(false);
 
@@ -64,6 +80,33 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
 
     toast.success("Article mis à jour avec succès");
     router.refresh();
+  }
+
+  async function handleGenerateImage() {
+    setGeneratingImage(true);
+    const result = await generateArticleImage(
+      article.id,
+      imageModel,
+      customPrompt.trim() || undefined
+    );
+    setGeneratingImage(false);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    if (result.url) {
+      setImageUrl(result.url);
+      setImageAlt(result.alt || title);
+      toast.success("Image générée avec succès");
+      router.refresh();
+    }
+  }
+
+  function handleRemoveImage() {
+    setImageUrl("");
+    setImageAlt("");
   }
 
   function addFaqItem() {
@@ -111,6 +154,123 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
         </p>
       </div>
 
+      {/* Image */}
+      <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+        <div className="flex items-center justify-between">
+          <Label className="flex items-center gap-2">
+            <ImageIcon className="h-4 w-4" />
+            Image de l&apos;article
+          </Label>
+          {imageUrl && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleRemoveImage}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Supprimer
+            </Button>
+          )}
+        </div>
+
+        {/* Affichage de l'image actuelle */}
+        {imageUrl && (
+          <div className="relative aspect-video w-full max-w-md rounded-lg overflow-hidden border">
+            <Image
+              src={imageUrl}
+              alt={imageAlt || title}
+              fill
+              className="object-cover"
+            />
+          </div>
+        )}
+
+        {/* URL personnalisée */}
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="imageUrl" className="text-sm">URL de l&apos;image</Label>
+            <Input
+              id="imageUrl"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://..."
+              disabled={loading || generatingImage}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="imageAlt" className="text-sm">Texte alternatif (SEO)</Label>
+            <Input
+              id="imageAlt"
+              value={imageAlt}
+              onChange={(e) => setImageAlt(e.target.value)}
+              placeholder="Description de l'image..."
+              disabled={loading || generatingImage}
+            />
+          </div>
+        </div>
+
+        {/* Génération IA */}
+        <div className="border-t pt-4 mt-4">
+          <p className="text-sm font-medium mb-3 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-purple-500" />
+            Génération IA (Replicate)
+          </p>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="imageModel" className="text-sm">Modèle</Label>
+              <Select
+                value={imageModel}
+                onValueChange={(v) => setImageModel(v as ImageModel)}
+                disabled={generatingImage}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(MODEL_INFO) as ImageModel[]).map((model) => (
+                    <SelectItem key={model} value={model}>
+                      <div className="flex flex-col">
+                        <span>{MODEL_INFO[model].name}</span>
+                        <span className="text-xs text-gray-500">{MODEL_INFO[model].speed}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="customPrompt" className="text-sm">Prompt personnalisé (optionnel)</Label>
+              <Input
+                id="customPrompt"
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                placeholder="Laisser vide pour générer à partir du titre..."
+                disabled={generatingImage}
+              />
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleGenerateImage}
+            disabled={loading || generatingImage}
+            className="mt-3 gap-2"
+          >
+            {generatingImage ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {generatingImage ? "Génération en cours..." : "Générer une image"}
+          </Button>
+          <p className="text-xs text-gray-500 mt-2">
+            L&apos;image sera générée et sauvegardée automatiquement.
+          </p>
+        </div>
+      </div>
+
       {/* Contenu avec tabs */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -145,8 +305,7 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
           </div>
         )}
         <p className="text-xs text-gray-500">
-          Utilisez le format Markdown. Les liens vers vintdress.com, vintboost.com et vintpower.com
-          seront automatiquement stylisés en CTA sur le blog.
+          Utilisez le format Markdown. Les liens externes s&apos;ouvriront dans un nouvel onglet.
         </p>
       </div>
 

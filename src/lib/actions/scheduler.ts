@@ -58,6 +58,7 @@ export async function upsertSchedulerConfig(
     max_per_week: number;
     days_of_week: number[];
     publish_hours: number[];
+    keyword_ids: string[];
   }
 ): Promise<{ data?: SchedulerConfig; error?: string }> {
   const supabase = await createClient();
@@ -82,6 +83,7 @@ export async function upsertSchedulerConfig(
         max_per_week: config.max_per_week,
         days_of_week: config.days_of_week,
         publish_hours: config.publish_hours,
+        keyword_ids: config.keyword_ids,
         updated_at: new Date().toISOString(),
       })
       .eq("site_id", siteId)
@@ -99,6 +101,7 @@ export async function upsertSchedulerConfig(
         max_per_week: config.max_per_week,
         days_of_week: config.days_of_week,
         publish_hours: config.publish_hours,
+        keyword_ids: config.keyword_ids,
       })
       .select()
       .single();
@@ -129,6 +132,35 @@ export async function toggleSchedulerEnabled(
 
   revalidatePath("/admin/scheduler");
   return { success: true };
+}
+
+// Récupérer les mots-clés disponibles (pending) pour la sélection
+export async function getAvailableKeywordsForScheduler(siteId?: string): Promise<{
+  data: Array<{ id: string; keyword: string; status: string | null; site_id: string | null; cluster: string | null; priority: number | null }>;
+  error?: string;
+}> {
+  const supabase = await createClient();
+
+  // Récupérer tous les keywords pending (du site spécifique + globaux)
+  let query = supabase
+    .from("keywords")
+    .select("id, keyword, status, site_id, cluster, priority")
+    .eq("status", "pending")
+    .order("priority", { ascending: false })
+    .order("keyword", { ascending: true });
+
+  // Si un siteId est fourni, on filtre les keywords du site + les globaux
+  if (siteId) {
+    query = query.or(`site_id.eq.${siteId},site_id.is.null`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return { data: [], error: error.message };
+  }
+
+  return { data: data || [] };
 }
 
 // Statistiques pour le dashboard scheduler

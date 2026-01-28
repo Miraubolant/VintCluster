@@ -2,43 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
-import { Camera, Video, Sparkles, ExternalLink, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { PublicArticle } from "@/lib/actions/blog";
 
 interface ArticleContentProps {
   article: PublicArticle;
   primaryColor: string;
   secondaryColor?: string;
-}
-
-// Produits Vint pour les CTA
-const VINT_PRODUCTS = {
-  "vintdress.com": {
-    name: "VintDress",
-    icon: Camera,
-    color: "#E91E63",
-  },
-  "vintboost.com": {
-    name: "VintBoost",
-    icon: Video,
-    color: "#9C27B0",
-  },
-  "vintpower.com": {
-    name: "VintPower",
-    icon: Sparkles,
-    color: "#FF9800",
-  },
-};
-
-// Vérifie si un lien est vers un produit Vint
-function getVintProduct(href: string) {
-  try {
-    const url = new URL(href);
-    const domain = url.hostname.replace("www.", "");
-    return VINT_PRODUCTS[domain as keyof typeof VINT_PRODUCTS];
-  } catch {
-    return null;
-  }
 }
 
 export function ArticleContent({ article, primaryColor, secondaryColor }: ArticleContentProps) {
@@ -141,9 +111,9 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
           components={{
             // Custom heading with accent bar
             h2: ({ children }) => (
-              <h2 className="relative">
+              <h2 className="relative pl-6">
                 <span
-                  className="absolute left-0 top-0 bottom-0 w-2"
+                  className="absolute left-0 top-1 bottom-1 w-2"
                   style={{ backgroundColor: primaryColor }}
                 />
                 {children}
@@ -159,44 +129,21 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
                 {children}
               </blockquote>
             ),
-            // Rendu personnalisé des liens CTA
+            // Rendu des liens
             a: ({ href, children }) => {
               if (!href) return <span>{children}</span>;
 
-              const product = getVintProduct(href);
-
-              // Si c'est un lien vers un produit Vint, afficher comme CTA
-              if (product) {
-                const Icon = product.icon;
-                return (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="not-prose group inline-flex items-center gap-3 px-6 py-4 my-6 font-black text-white uppercase tracking-wider border-[5px] border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[3px] hover:translate-y-[3px] transition-all no-underline"
-                    style={{ backgroundColor: product.color }}
-                  >
-                    <div className="p-2 bg-white/20 border-2 border-white/30">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <span>{children}</span>
-                    <ExternalLink className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                  </a>
-                );
-              }
-
-              // Lien externe standard
+              // Lien externe
               if (href.startsWith("http")) {
                 return (
                   <a
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="relative inline-block font-bold text-black"
+                    className="font-bold text-black border-b-[3px] hover:border-b-[4px] transition-all"
+                    style={{ borderColor: primaryColor }}
                   >
-                    <span className="relative z-10 border-b-[3px] border-black hover:border-b-[4px] transition-all" style={{ borderColor: primaryColor }}>
-                      {children}
-                    </span>
+                    {children}
                   </a>
                 );
               }
@@ -205,11 +152,10 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
               return (
                 <Link
                   href={href}
-                  className="relative inline-block font-bold text-black"
+                  className="font-bold text-black border-b-[3px] hover:border-b-[4px] transition-all"
+                  style={{ borderColor: primaryColor }}
                 >
-                  <span className="relative z-10 border-b-[3px] border-black hover:border-b-[4px] transition-all" style={{ borderColor: primaryColor }}>
-                    {children}
-                  </span>
+                  {children}
                 </Link>
               );
             },

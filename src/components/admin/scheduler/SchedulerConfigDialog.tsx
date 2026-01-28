@@ -20,9 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { upsertSchedulerConfig } from "@/lib/actions/scheduler";
+import { upsertSchedulerConfig, getAvailableKeywordsForScheduler } from "@/lib/actions/scheduler";
 import { toast } from "sonner";
-import { ImageIcon } from "lucide-react";
+import { ImageIcon, Search, Tag } from "lucide-react";
 import type { Site, SchedulerConfig } from "@/types/database";
 
 interface SchedulerConfigWithSite extends SchedulerConfig {
@@ -31,6 +31,15 @@ interface SchedulerConfigWithSite extends SchedulerConfig {
     name: string;
     domain: string;
   };
+}
+
+interface AvailableKeyword {
+  id: string;
+  keyword: string;
+  status: string | null;
+  site_id: string | null;
+  cluster: string | null;
+  priority: number | null;
 }
 
 interface SchedulerConfigDialogProps {
@@ -68,6 +77,27 @@ export function SchedulerConfigDialog({
   const [maxPerWeek, setMaxPerWeek] = useState(20);
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
   const [publishHours, setPublishHours] = useState<number[]>([9, 14]);
+  const [selectedKeywordIds, setSelectedKeywordIds] = useState<string[]>([]);
+  const [availableKeywords, setAvailableKeywords] = useState<AvailableKeyword[]>([]);
+  const [keywordSearch, setKeywordSearch] = useState("");
+  const [loadingKeywords, setLoadingKeywords] = useState(false);
+
+  // Charger les keywords disponibles quand le site change
+  useEffect(() => {
+    async function loadKeywords() {
+      if (!selectedSiteId) {
+        setAvailableKeywords([]);
+        return;
+      }
+      setLoadingKeywords(true);
+      const result = await getAvailableKeywordsForScheduler(selectedSiteId);
+      if (!result.error) {
+        setAvailableKeywords(result.data);
+      }
+      setLoadingKeywords(false);
+    }
+    loadKeywords();
+  }, [selectedSiteId]);
 
   useEffect(() => {
     if (config) {
@@ -78,6 +108,7 @@ export function SchedulerConfigDialog({
       setMaxPerWeek(config.max_per_week || 20);
       setDaysOfWeek((config.days_of_week as number[]) || [1, 2, 3, 4, 5]);
       setPublishHours((config.publish_hours as number[]) || [9, 14]);
+      setSelectedKeywordIds((config.keyword_ids as string[]) || []);
     } else {
       setSelectedSiteId("");
       setEnabled(true);
@@ -86,7 +117,9 @@ export function SchedulerConfigDialog({
       setMaxPerWeek(20);
       setDaysOfWeek([1, 2, 3, 4, 5]);
       setPublishHours([9, 14]);
+      setSelectedKeywordIds([]);
     }
+    setKeywordSearch("");
   }, [config, open]);
 
   function toggleDay(day: number) {
@@ -103,9 +136,35 @@ export function SchedulerConfigDialog({
     );
   }
 
+  function toggleKeyword(keywordId: string) {
+    setSelectedKeywordIds((prev) =>
+      prev.includes(keywordId)
+        ? prev.filter((id) => id !== keywordId)
+        : [...prev, keywordId]
+    );
+  }
+
+  function selectAllKeywords() {
+    const filteredIds = filteredKeywords.map((k) => k.id);
+    setSelectedKeywordIds((prev) => {
+      const newIds = new Set([...prev, ...filteredIds]);
+      return Array.from(newIds);
+    });
+  }
+
+  function deselectAllKeywords() {
+    const filteredIds = new Set(filteredKeywords.map((k) => k.id));
+    setSelectedKeywordIds((prev) => prev.filter((id) => !filteredIds.has(id)));
+  }
+
   async function handleSubmit() {
     if (!selectedSiteId) {
       toast.error("Veuillez sélectionner un site");
+      return;
+    }
+
+    if (selectedKeywordIds.length === 0) {
+      toast.error("Veuillez sélectionner au moins un mot-clé");
       return;
     }
 
@@ -118,6 +177,7 @@ export function SchedulerConfigDialog({
       max_per_week: maxPerWeek,
       days_of_week: daysOfWeek,
       publish_hours: publishHours,
+      keyword_ids: selectedKeywordIds,
     });
 
     setLoading(false);
@@ -134,9 +194,23 @@ export function SchedulerConfigDialog({
 
   const isEdit = !!config;
 
+  // Filtrer les keywords par recherche
+  const filteredKeywords = availableKeywords.filter((k) =>
+    k.keyword.toLowerCase().includes(keywordSearch.toLowerCase()) ||
+    (k.cluster && k.cluster.toLowerCase().includes(keywordSearch.toLowerCase()))
+  );
+
+  // Grouper par cluster
+  const groupedKeywords = filteredKeywords.reduce((acc, keyword) => {
+    const cluster = keyword.cluster || "Sans cluster";
+    if (!acc[cluster]) acc[cluster] = [];
+    acc[cluster].push(keyword);
+    return acc;
+  }, {} as Record<string, AvailableKeyword[]>);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "Modifier la configuration" : "Nouvelle configuration"}
@@ -246,6 +320,101 @@ export function SchedulerConfigDialog({
             </div>
           </div>
 
+          {/* Sélection des mots-clés */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Mots-clés à utiliser ({selectedKeywordIds.length} sélectionnés)
+              </Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAllKeywords}
+                  disabled={!selectedSiteId || filteredKeywords.length === 0}
+                >
+                  Tout sélectionner
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={deselectAllKeywords}
+                  disabled={selectedKeywordIds.length === 0}
+                >
+                  Tout désélectionner
+                </Button>
+              </div>
+            </div>
+
+            {/* Barre de recherche */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Rechercher un mot-clé ou cluster..."
+                value={keywordSearch}
+                onChange={(e) => setKeywordSearch(e.target.value)}
+                className="pl-9"
+                disabled={!selectedSiteId}
+              />
+            </div>
+
+            {/* Liste des mots-clés */}
+            <div className="border rounded-lg max-h-60 overflow-y-auto">
+              {!selectedSiteId ? (
+                <p className="p-4 text-sm text-gray-500 text-center">
+                  Sélectionnez un site pour voir les mots-clés disponibles
+                </p>
+              ) : loadingKeywords ? (
+                <p className="p-4 text-sm text-gray-500 text-center">
+                  Chargement des mots-clés...
+                </p>
+              ) : availableKeywords.length === 0 ? (
+                <p className="p-4 text-sm text-gray-500 text-center">
+                  Aucun mot-clé pending disponible pour ce site
+                </p>
+              ) : filteredKeywords.length === 0 ? (
+                <p className="p-4 text-sm text-gray-500 text-center">
+                  Aucun mot-clé ne correspond à votre recherche
+                </p>
+              ) : (
+                <div className="divide-y">
+                  {Object.entries(groupedKeywords).map(([cluster, keywords]) => (
+                    <div key={cluster}>
+                      <div className="px-3 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase sticky top-0">
+                        {cluster} ({keywords.length})
+                      </div>
+                      {keywords.map((keyword) => (
+                        <label
+                          key={keyword.id}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedKeywordIds.includes(keyword.id)}
+                            onCheckedChange={() => toggleKeyword(keyword.id)}
+                          />
+                          <span className="flex-1 text-sm">{keyword.keyword}</span>
+                          {keyword.priority !== null && keyword.priority > 0 && (
+                            <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                              P{keyword.priority}
+                            </span>
+                          )}
+                          {keyword.site_id === null && (
+                            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
+                              Global
+                            </span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Info sur la génération d'images */}
           <div className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
             <div className="p-1.5 bg-purple-100 rounded">
@@ -263,7 +432,7 @@ export function SchedulerConfigDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Annuler
             </Button>
-            <Button onClick={handleSubmit} disabled={loading}>
+            <Button onClick={handleSubmit} disabled={loading || selectedKeywordIds.length === 0}>
               {loading ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </div>

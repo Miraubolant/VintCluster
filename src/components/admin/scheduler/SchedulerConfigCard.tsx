@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Settings, ChevronDown, ChevronUp, ImageIcon } from "lucide-react";
+import { Settings, ChevronDown, ChevronUp, ImageIcon, Tag } from "lucide-react";
 import type { SchedulerConfig } from "@/types/database";
 
 interface SchedulerConfigWithSite extends SchedulerConfig {
@@ -32,6 +32,7 @@ export function SchedulerConfigCard({
 
   const daysOfWeek = (config.days_of_week as number[]) || [];
   const publishHours = (config.publish_hours as number[]) || [];
+  const keywordIds = (config.keyword_ids as string[]) || [];
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -98,6 +99,15 @@ export function SchedulerConfigCard({
               <div className="flex items-center gap-1">
                 <ImageIcon className="h-3.5 w-3.5 text-purple-600" />
                 <p className="font-medium text-purple-700">FLUX Schnell</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-gray-500 mb-1">Mots-cles</p>
+              <div className="flex items-center gap-1">
+                <Tag className="h-3.5 w-3.5 text-indigo-600" />
+                <p className="font-medium text-indigo-700">
+                  {keywordIds.length > 0 ? `${keywordIds.length} selectionnes` : "Aucun"}
+                </p>
               </div>
             </div>
             <div>
