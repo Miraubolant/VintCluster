@@ -28,12 +28,33 @@ export default async function BlogLayout({
   // Valeurs par défaut pour localhost sans site
   const siteName = site?.name || "VintCluster Blog";
   const primaryColor = site?.primary_color || "#FFE500";
+  const secondaryColor = site?.secondary_color || "#000000";
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <BlogHeader siteName={siteName} primaryColor={primaryColor} />
-      <main className="flex-1">{children}</main>
-      <BlogFooter siteName={siteName} primaryColor={primaryColor} />
+    <div className="min-h-screen flex flex-col bg-gray-100">
+      {/* Subtle grid pattern background */}
+      <div
+        className="fixed inset-0 pointer-events-none opacity-[0.02] z-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(${primaryColor} 1px, transparent 1px),
+            linear-gradient(90deg, ${primaryColor} 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px'
+        }}
+      />
+
+      <BlogHeader
+        siteName={siteName}
+        primaryColor={primaryColor}
+        secondaryColor={secondaryColor}
+      />
+      <main className="flex-1 relative z-10">{children}</main>
+      <BlogFooter
+        siteName={siteName}
+        primaryColor={primaryColor}
+        secondaryColor={secondaryColor}
+      />
     </div>
   );
 }
