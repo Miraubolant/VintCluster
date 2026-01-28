@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { BulkProgressWrapper } from "@/components/admin/BulkProgressWrapper";
 
 export default async function DashboardLayout({
   children,
@@ -16,17 +17,19 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <AdminSidebar />
+    <BulkProgressWrapper>
+      <div className="min-h-screen bg-gray-50">
+        {/* Sidebar */}
+        <AdminSidebar />
 
-      {/* Main content */}
-      <div className="lg:pl-64">
-        <AdminHeader user={user} />
-        <main className="p-6">
-          {children}
-        </main>
+        {/* Main content */}
+        <div className="lg:pl-64">
+          <AdminHeader user={user} />
+          <main className="p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </BulkProgressWrapper>
   );
 }

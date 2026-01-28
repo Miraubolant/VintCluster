@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { X, CheckCircle2, AlertCircle, Loader2, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface BulkProgressState {
@@ -17,11 +17,13 @@ interface BulkProgressBarProps {
   progress: BulkProgressState;
   onClose: () => void;
   onComplete?: () => void;
+  onStop?: () => void;
 }
 
-export function BulkProgressBar({ progress, onClose, onComplete }: BulkProgressBarProps) {
+export function BulkProgressBar({ progress, onClose, onComplete, onStop }: BulkProgressBarProps) {
   const [minimized, setMinimized] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
 
   const percentage = progress.total > 0
     ? Math.round((progress.completed / progress.total) * 100)
@@ -29,24 +31,38 @@ export function BulkProgressBar({ progress, onClose, onComplete }: BulkProgressB
 
   const isComplete = !progress.isRunning && progress.completed > 0;
   const hasErrors = progress.errors.length > 0;
+  const wasStopped = progress.errors.some(e => e.includes("Annulé"));
 
   useEffect(() => {
     if (isComplete && !showSuccess) {
       setShowSuccess(true);
+      setIsStopping(false);
       onComplete?.();
-      // Auto-close after 5s if no errors
-      if (!hasErrors) {
+      // Auto-close after 5s if no errors and not stopped
+      if (!hasErrors && !wasStopped) {
         const timer = setTimeout(() => {
           onClose();
         }, 5000);
         return () => clearTimeout(timer);
       }
     }
-  }, [isComplete, showSuccess, hasErrors, onClose, onComplete]);
+  }, [isComplete, showSuccess, hasErrors, wasStopped, onClose, onComplete]);
+
+  // Reset stopping state when not running
+  useEffect(() => {
+    if (!progress.isRunning) {
+      setIsStopping(false);
+    }
+  }, [progress.isRunning]);
 
   if (!progress.isRunning && progress.completed === 0 && progress.errors.length === 0) {
     return null;
   }
+
+  const handleStop = () => {
+    setIsStopping(true);
+    onStop?.();
+  };
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80 animate-in slide-in-from-bottom-4 duration-300">
@@ -60,7 +76,7 @@ export function BulkProgressBar({ progress, onClose, onComplete }: BulkProgressB
             {progress.isRunning ? (
               <Loader2 className="h-4 w-4 text-indigo-600 animate-spin" />
             ) : isComplete ? (
-              hasErrors ? (
+              hasErrors || wasStopped ? (
                 <AlertCircle className="h-4 w-4 text-amber-500" />
               ) : (
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -68,17 +84,37 @@ export function BulkProgressBar({ progress, onClose, onComplete }: BulkProgressB
             ) : null}
             <span className="font-medium text-sm text-gray-900">
               {progress.isRunning
-                ? "Génération en cours"
-                : hasErrors
-                  ? "Terminé avec erreurs"
-                  : "Génération terminée"
+                ? isStopping
+                  ? "Arrêt en cours..."
+                  : "Génération en cours"
+                : wasStopped
+                  ? "Génération annulée"
+                  : hasErrors
+                    ? "Terminé avec erreurs"
+                    : "Génération terminée"
               }
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <span className="text-xs font-mono text-gray-600">
               {progress.completed}/{progress.total}
             </span>
+            {/* Stop button - only show when running */}
+            {progress.isRunning && onStop && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStop();
+                }}
+                disabled={isStopping}
+                title="Arrêter la génération"
+              >
+                <Square className="h-3 w-3 fill-current" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -98,14 +134,16 @@ export function BulkProgressBar({ progress, onClose, onComplete }: BulkProgressB
           <div
             className={`absolute inset-y-0 left-0 transition-all duration-500 ease-out ${
               isComplete
-                ? hasErrors
+                ? hasErrors || wasStopped
                   ? "bg-amber-500"
                   : "bg-green-500"
-                : "bg-indigo-600"
+                : isStopping
+                  ? "bg-red-500"
+                  : "bg-indigo-600"
             }`}
             style={{ width: `${percentage}%` }}
           />
-          {progress.isRunning && (
+          {progress.isRunning && !isStopping && (
             <div
               className="absolute inset-y-0 bg-indigo-400/50 animate-pulse"
               style={{
@@ -122,8 +160,8 @@ export function BulkProgressBar({ progress, onClose, onComplete }: BulkProgressB
             {/* Current status */}
             {progress.isRunning && progress.currentSite && (
               <div className="text-xs text-gray-600 flex items-center gap-2">
-                <span className="inline-block w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
-                {progress.currentSite}
+                <span className={`inline-block w-1.5 h-1.5 rounded-full ${isStopping ? "bg-red-500" : "bg-indigo-500"} animate-pulse`} />
+                {isStopping ? "Arrêt après cet article..." : progress.currentSite}
               </div>
             )}
 
@@ -150,7 +188,7 @@ export function BulkProgressBar({ progress, onClose, onComplete }: BulkProgressB
                 {progress.errors.slice(-2).map((error, i) => (
                   <div
                     key={i}
-                    className="text-xs text-red-600 flex items-start gap-2"
+                    className={`text-xs flex items-start gap-2 ${error.includes("Annulé") ? "text-amber-600" : "text-red-600"}`}
                   >
                     <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
                     <span className="line-clamp-2">{error}</span>
@@ -165,9 +203,16 @@ export function BulkProgressBar({ progress, onClose, onComplete }: BulkProgressB
             )}
 
             {/* Completion message */}
-            {isComplete && !hasErrors && (
+            {isComplete && !hasErrors && !wasStopped && (
               <div className="text-xs text-green-600 font-medium pt-1">
                 {progress.completed} article{progress.completed > 1 ? "s" : ""} généré{progress.completed > 1 ? "s" : ""} avec succès
+              </div>
+            )}
+
+            {/* Stopped message */}
+            {isComplete && wasStopped && (
+              <div className="text-xs text-amber-600 font-medium pt-1">
+                {progress.completed} article{progress.completed > 1 ? "s" : ""} généré{progress.completed > 1 ? "s" : ""} avant arrêt
               </div>
             )}
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, RefreshCw, CheckSquare, X, Rocket, Loader2 } from "lucide-react";
@@ -8,9 +8,8 @@ import {
   SchedulerStats,
   SchedulerConfigCard,
   SchedulerConfigDialog,
-  BulkProgressBar,
-  type BulkProgressState,
 } from "@/components/admin/scheduler";
+import { useBulkProgress } from "@/contexts/BulkProgressContext";
 import {
   getSchedulerConfigs,
   getSchedulerStats,
@@ -52,15 +51,16 @@ export default function SchedulerPage() {
   const [bulkArticleCount, setBulkArticleCount] = useState(4);
   const [bulkGenerating, setBulkGenerating] = useState(false);
 
-  // Progress tracking
-  const [bulkProgress, setBulkProgress] = useState<BulkProgressState>({
-    isRunning: false,
-    total: 0,
-    completed: 0,
-    currentSite: null,
-    errors: [],
-    results: [],
-  });
+  // Use context for progress tracking (persists across pages)
+  const { progress, setProgress, isCancelled } = useBulkProgress();
+
+  // Use ref for cancel check in async loop (state updates may not be immediate)
+  const cancelledRef = useRef(false);
+
+  // Sync cancelled state with ref
+  useEffect(() => {
+    cancelledRef.current = isCancelled;
+  }, [isCancelled]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -150,6 +150,7 @@ export default function SchedulerPage() {
     setBulkGenerating(true);
     setSelectionMode(false);
     setSelectedSiteIds(new Set());
+    cancelledRef.current = false;
 
     // Préparer les tâches
     const { tasks, errors: prepErrors } = await prepareBulkGeneration(
@@ -161,7 +162,7 @@ export default function SchedulerPage() {
     const totalArticles = tasks.reduce((sum, t) => sum + t.count, 0);
 
     // Initialiser le progress
-    setBulkProgress({
+    setProgress({
       isRunning: true,
       total: totalArticles,
       completed: 0,
@@ -171,10 +172,20 @@ export default function SchedulerPage() {
     });
 
     // Générer article par article
+    outerLoop:
     for (const task of tasks) {
       for (let i = 0; i < task.count; i++) {
+        // Check if cancelled before starting each article
+        if (cancelledRef.current) {
+          setProgress(prev => ({
+            ...prev,
+            errors: [...prev.errors, "Annulé par l'utilisateur"],
+          }));
+          break outerLoop;
+        }
+
         // Update current site
-        setBulkProgress(prev => ({
+        setProgress(prev => ({
           ...prev,
           currentSite: `${task.siteName} (${i + 1}/${task.count})`,
         }));
@@ -185,14 +196,33 @@ export default function SchedulerPage() {
           task.autoPublish
         );
 
+        // Check if cancelled after generation
+        if (cancelledRef.current) {
+          // Still count this article if it succeeded
+          if (result.success && result.title) {
+            setProgress(prev => ({
+              ...prev,
+              completed: prev.completed + 1,
+              results: [...prev.results, { siteName: task.siteName, title: result.title! }],
+              errors: [...prev.errors, "Annulé par l'utilisateur"],
+            }));
+          } else {
+            setProgress(prev => ({
+              ...prev,
+              errors: [...prev.errors, "Annulé par l'utilisateur"],
+            }));
+          }
+          break outerLoop;
+        }
+
         if (result.success && result.title) {
-          setBulkProgress(prev => ({
+          setProgress(prev => ({
             ...prev,
             completed: prev.completed + 1,
             results: [...prev.results, { siteName: task.siteName, title: result.title! }],
           }));
         } else if (result.error) {
-          setBulkProgress(prev => ({
+          setProgress(prev => ({
             ...prev,
             errors: [...prev.errors, `${task.siteName}: ${result.error}`],
           }));
@@ -207,23 +237,13 @@ export default function SchedulerPage() {
     // Finaliser
     await finalizeBulkGeneration();
     setBulkGenerating(false);
-    setBulkProgress(prev => ({
+    cancelledRef.current = false;
+    setProgress(prev => ({
       ...prev,
       isRunning: false,
       currentSite: null,
     }));
     loadData();
-  }
-
-  function handleCloseProgress() {
-    setBulkProgress({
-      isRunning: false,
-      total: 0,
-      completed: 0,
-      currentSite: null,
-      errors: [],
-      results: [],
-    });
   }
 
   // Sites sans configuration
@@ -369,15 +389,15 @@ export default function SchedulerPage() {
 
             <Button
               onClick={handleBulkGeneration}
-              disabled={selectedSiteIds.size === 0 || bulkGenerating}
+              disabled={selectedSiteIds.size === 0 || bulkGenerating || progress.isRunning}
               className="bg-indigo-600 hover:bg-indigo-700 gap-2"
             >
-              {bulkGenerating ? (
+              {bulkGenerating || progress.isRunning ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Rocket className="h-4 w-4" />
               )}
-              {bulkGenerating ? "Génération..." : "Lancer"}
+              {bulkGenerating || progress.isRunning ? "Génération..." : "Lancer"}
             </Button>
 
             <Button
@@ -392,13 +412,7 @@ export default function SchedulerPage() {
         </div>
       )}
 
-      {/* Progress bar for bulk generation */}
-      {(bulkProgress.isRunning || bulkProgress.completed > 0) && (
-        <BulkProgressBar
-          progress={bulkProgress}
-          onClose={handleCloseProgress}
-        />
-      )}
+      {/* Progress bar is rendered by BulkProgressWrapper in the layout */}
     </div>
   );
 }
