@@ -69,7 +69,6 @@ export async function GET(request: NextRequest) {
         .gte("created_at", todayStart.toISOString());
 
       if ((todayCount || 0) >= (config.max_per_day || 5)) {
-        console.log(`Site ${config.site_id}: Daily limit reached`);
         continue;
       }
 
@@ -84,7 +83,6 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (keywordError || !keyword) {
-        console.log(`Site ${config.site_id}: No pending keywords`);
         continue;
       }
 
@@ -146,7 +144,6 @@ export async function GET(request: NextRequest) {
         });
 
         totalGenerated++;
-        console.log(`Generated article for keyword: ${keyword.keyword}`);
       } catch (genError) {
         console.error("Generation error:", genError);
         await supabase

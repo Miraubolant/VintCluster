@@ -246,15 +246,23 @@ Réponds UNIQUEMENT en JSON valide avec ce format:
       return { error: "Pas de réponse de l'IA" };
     }
 
-    // Parse JSON response
-    const result = JSON.parse(content);
+    // Parse JSON response with specific error handling
+    let result;
+    try {
+      result = JSON.parse(content);
+    } catch {
+      return { error: "Réponse IA invalide (format JSON incorrect)" };
+    }
+
+    if (!result.meta_title && !result.meta_description) {
+      return { error: "Réponse IA incomplète" };
+    }
 
     return {
       meta_title: result.meta_title || "",
       meta_description: result.meta_description || "",
     };
-  } catch (error) {
-    console.error("Error generating SEO:", error);
+  } catch {
     return { error: "Erreur lors de la génération SEO" };
   }
 }

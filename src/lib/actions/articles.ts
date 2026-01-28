@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { generateArticle } from "@/lib/openai";
 import { searchUnsplashImage } from "@/lib/unsplash";
+import { generateSlug } from "@/lib/utils/slug";
 import type { Article, ArticleStatus, Json } from "@/types/database";
 
 interface ArticleWithKeyword extends Article {
@@ -227,12 +228,18 @@ export async function updateArticleStatus(
 }
 
 // Mise à jour groupée du statut de plusieurs articles
+const MAX_BULK_ITEMS = 100;
+
 export async function bulkUpdateArticleStatus(
   ids: string[],
   status: ArticleStatus
 ): Promise<{ success: boolean; count: number; error?: string }> {
   if (ids.length === 0) {
     return { success: false, count: 0, error: "Aucun article sélectionné" };
+  }
+
+  if (ids.length > MAX_BULK_ITEMS) {
+    return { success: false, count: 0, error: `Maximum ${MAX_BULK_ITEMS} articles par opération` };
   }
 
   const supabase = await createClient();
@@ -288,6 +295,10 @@ export async function bulkDeleteArticles(
 ): Promise<{ success: boolean; count: number; error?: string }> {
   if (ids.length === 0) {
     return { success: false, count: 0, error: "Aucun article sélectionné" };
+  }
+
+  if (ids.length > MAX_BULK_ITEMS) {
+    return { success: false, count: 0, error: `Maximum ${MAX_BULK_ITEMS} articles par opération` };
   }
 
   const supabase = await createClient();
@@ -425,19 +436,6 @@ export async function getArticleById(
   }
 
   return { data: data as ArticleWithKeyword };
-}
-
-// Générer un slug à partir d'un titre
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Supprimer les accents
-    .replace(/[^a-z0-9\s-]/g, "") // Supprimer caractères spéciaux
-    .replace(/\s+/g, "-") // Espaces en tirets
-    .replace(/-+/g, "-") // Tirets multiples en simple
-    .replace(/^-|-$/g, "") // Supprimer tirets début/fin
-    .substring(0, 100); // Limiter la longueur
 }
 
 // Créer un article manuellement

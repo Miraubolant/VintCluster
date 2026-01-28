@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
+  // Auth check - require CRON_SECRET for debug routes
+  const secret = request.nextUrl.searchParams.get("secret");
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const slug = request.nextUrl.searchParams.get("slug");
   const host = request.headers.get("host") || "";
   const domain = host.split(":")[0].toLowerCase().replace(/^www\./, "");

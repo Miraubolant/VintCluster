@@ -1,4 +1,5 @@
 import { getOpenAIClient } from "./client";
+import { generateSlug } from "@/lib/utils/slug";
 import type { FAQItem } from "@/types/database";
 
 export interface GeneratedArticle {
@@ -98,17 +99,6 @@ Exemple de CTA bien placé:
 "Prendre de belles photos de vêtements demande du temps et du matériel coûteux. Et si tu pouvais générer des photos portées professionnelles en quelques clics ?
 
 **[🚀 Essayer VintDress gratuitement](https://vintdress.com)**"`;
-
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
-}
 
 export async function generateArticle(
   keyword: string,

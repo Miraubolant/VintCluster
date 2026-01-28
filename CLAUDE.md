@@ -493,23 +493,23 @@ generateSiteSEO(siteName: string, siteId?: string)
 
 ## Audit & Issues Connues
 
-### Issues Critiques à Corriger
+### Issues Corrigées ✅
 
-1. **JSON.parse sans try-catch** (`sites.ts:250`) - Risque d'erreur si OpenAI retourne du JSON invalide
-2. **Debug routes sans auth** - Les endpoints `/api/debug-*` sont accessibles publiquement
+1. ~~**JSON.parse sans try-catch**~~ → Ajout de try-catch spécifique dans `generateSiteSEO()`
+2. ~~**Debug routes sans auth**~~ → Endpoints `/api/debug-*` protégés par `CRON_SECRET`
+3. ~~**Pas de limite sur bulk operations**~~ → Maximum 100 items par opération
+4. ~~**Code dupliqué generateSlug()**~~ → Extrait dans `src/lib/utils/slug.ts`
+5. ~~**console.log en production**~~ → Logs informatifs supprimés, console.error conservés
 
-### Warnings
+### Warnings Restants
 
-1. **Type casting excessif** - 13 occurrences de `as unknown as` dans le code
-2. **console.log en production** - 7 occurrences à remplacer par du logging structuré
-3. **Pas de rate limiting** - Sur les endpoints API cron
-4. **Pas de limite sur bulk operations** - Risque de timeout avec trop d'éléments
+1. **Type casting excessif** - 13 occurrences de `as unknown as` dans le code (normal pour JSONB Supabase)
+2. **Pas de rate limiting** - Sur les endpoints API cron (protégés par secret)
 
-### Suggestions
+### Suggestions Restantes
 
-1. **Code dupliqué** - `generateSlug()` existe dans `articles.ts` et `generate-article.ts`
-2. **Types dupliqués** - `ArticleWithKeyword`, `ArticleWithDetails`, `KeywordWithSite` à consolider
-3. **Produits hardcodés** - URLs des produits Vint* à externaliser en config
+1. **Types dupliqués** - `ArticleWithKeyword`, `ArticleWithDetails`, `KeywordWithSite` à consolider
+2. **Produits hardcodés** - URLs des produits Vint* à externaliser en config
 
 ## Migration SQL
 

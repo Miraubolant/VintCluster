@@ -21,6 +21,12 @@ interface PublicArticle {
 }
 
 export async function GET(request: NextRequest) {
+  // Auth check - require CRON_SECRET for debug routes
+  const secret = request.nextUrl.searchParams.get("secret");
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const slug = request.nextUrl.searchParams.get("slug");
   const domain = request.nextUrl.searchParams.get("domain");
   const steps: { step: string; status: string; error?: string; data?: unknown }[] = [];
