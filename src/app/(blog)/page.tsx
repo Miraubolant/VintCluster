@@ -31,7 +31,13 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(baseUrl),
     title: site.meta_title || site.name,
     description: site.meta_description || `Blog ${site.name}`,
-    icons: site.favicon_url ? { icon: site.favicon_url } : undefined,
+    icons: site.favicon_url
+      ? {
+          icon: site.favicon_url,
+          shortcut: site.favicon_url,
+          apple: site.favicon_url,
+        }
+      : undefined,
     alternates: {
       canonical: "/",
     },
