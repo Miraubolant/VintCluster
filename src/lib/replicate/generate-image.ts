@@ -48,11 +48,12 @@ export async function generateImage(
   const apiToken = process.env.REPLICATE_API_TOKEN;
 
   if (!apiToken) {
-    console.warn("REPLICATE_API_TOKEN not defined, skipping image generation");
+    console.error("REPLICATE_API_TOKEN not defined - image generation disabled");
     return null;
   }
 
   try {
+    console.log("Starting image generation:", { model, siteId: siteId || "none", promptPreview: prompt.substring(0, 50) });
     const replicate = getReplicateClient();
     const modelId = MODELS[model];
 
@@ -90,18 +91,25 @@ export async function generateImage(
     const tempImageUrl = Array.isArray(output) ? output[0] : output;
 
     if (!tempImageUrl || typeof tempImageUrl !== "string") {
-      console.error("No image URL returned from Replicate");
+      console.error("No image URL returned from Replicate. Output:", typeof output, output);
       return null;
     }
+
+    console.log("Image generated successfully, temp URL obtained");
 
     // Si un siteId est fourni, persister l'image dans Supabase Storage
     let finalImageUrl = tempImageUrl;
     if (siteId) {
-      const storedUrl = await uploadImageFromUrl(tempImageUrl, siteId);
-      if (storedUrl) {
-        finalImageUrl = storedUrl;
-      } else {
-        console.warn("Failed to persist image to storage, using temporary URL");
+      try {
+        const storedUrl = await uploadImageFromUrl(tempImageUrl, siteId);
+        if (storedUrl) {
+          finalImageUrl = storedUrl;
+        } else {
+          console.warn("Failed to persist image to storage, using temporary URL");
+        }
+      } catch (storageError) {
+        // Storage errors should not break image generation
+        console.error("Storage error (using temporary URL):", storageError);
       }
     }
 

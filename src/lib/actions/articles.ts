@@ -136,7 +136,7 @@ export async function generateArticleFromKeyword(
       imageAlt = generated.title;
     } else if (imageOptions?.source === "ai") {
       const prompt = generateImagePrompt(generated.title, keyword.keyword);
-      const image = await generateImage(prompt, imageOptions.model || "flux-schnell");
+      const image = await generateImage(prompt, imageOptions.model || "flux-schnell", keyword.site_id ?? undefined);
       if (image) {
         imageUrl = image.url;
         imageAlt = image.alt;
@@ -539,7 +539,7 @@ export async function generateArticleFromTopic(
       imageAlt = generated.title;
     } else if (imageOptions?.source === "ai") {
       const prompt = generateImagePrompt(generated.title, topic);
-      const image = await generateImage(prompt, imageOptions.model || "flux-schnell");
+      const image = await generateImage(prompt, imageOptions.model || "flux-schnell", siteId);
       if (image) {
         imageUrl = image.url;
         imageAlt = image.alt;
@@ -618,11 +618,15 @@ export async function generateArticleImage(
     const keyword = (article.keyword as { keyword: string } | null)?.keyword;
     const prompt = customPrompt || generateImagePrompt(article.title, keyword);
 
+    // Log pour debug
+    console.log("Generating image:", { articleId, model, siteId: article.site_id, promptLength: prompt.length });
+
     // Générer l'image et la persister dans Supabase Storage
-    const image = await generateImage(prompt, model, article.site_id);
+    const image = await generateImage(prompt, model, article.site_id ?? undefined);
 
     if (!image) {
-      return { error: "Échec de la génération d'image" };
+      console.error("Image generation returned null for article:", articleId);
+      return { error: "Échec de la génération d'image - vérifiez que REPLICATE_API_TOKEN est configuré" };
     }
 
     // Mettre à jour l'article avec la nouvelle image
