@@ -27,11 +27,28 @@ export const getSiteByDomain = unstable_cache(
   async (domain: string): Promise<Site | null> => {
     const supabase = createPublicClient();
 
-    const { data, error } = await supabase
+    // Normaliser le domaine (supprimer www. si présent)
+    const normalizedDomain = domain.toLowerCase().replace(/^www\./, "");
+
+    // Essayer avec le domaine normalisé
+    let { data, error } = await supabase
       .from("sites")
       .select("*")
-      .eq("domain", domain)
+      .eq("domain", normalizedDomain)
       .single();
+
+    // Si pas trouvé, essayer avec www. préfixé
+    if (error || !data) {
+      const wwwDomain = `www.${normalizedDomain}`;
+      const result = await supabase
+        .from("sites")
+        .select("*")
+        .eq("domain", wwwDomain)
+        .single();
+
+      data = result.data;
+      error = result.error;
+    }
 
     if (error || !data) {
       return null;
