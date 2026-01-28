@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import sharp from "sharp";
 import type { Site } from "@/types/database";
 import { getOpenAIClient } from "@/lib/openai/client";
+import { uploadBuffer } from "@/lib/supabase/storage";
 
 // Schema de validation
 const siteSchema = z.object({
@@ -267,5 +269,76 @@ Réponds UNIQUEMENT en JSON valide avec ce format:
     };
   } catch {
     return { error: "Erreur lors de la génération SEO" };
+  }
+}
+
+/**
+ * Génère un favicon avec les initiales du site
+ */
+export async function generateFavicon(
+  siteName: string,
+  primaryColor: string,
+  secondaryColor: string,
+  siteId?: string
+): Promise<{ url: string } | { error: string }> {
+  try {
+    // Extraire les initiales (max 2 caractères)
+    const words = siteName.trim().split(/\s+/);
+    let initials: string;
+    if (words.length >= 2) {
+      initials = (words[0][0] + words[1][0]).toUpperCase();
+    } else {
+      initials = siteName.substring(0, 2).toUpperCase();
+    }
+
+    // Créer le SVG avec style géométrique brutaliste
+    const size = 512;
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <!-- Background -->
+        <rect width="${size}" height="${size}" fill="${primaryColor}"/>
+
+        <!-- Border -->
+        <rect x="16" y="16" width="${size - 32}" height="${size - 32}"
+              fill="none" stroke="${secondaryColor}" stroke-width="24"/>
+
+        <!-- Text -->
+        <text x="50%" y="54%"
+              font-family="Arial Black, Arial, sans-serif"
+              font-size="240"
+              font-weight="900"
+              fill="${secondaryColor}"
+              text-anchor="middle"
+              dominant-baseline="middle">
+          ${initials}
+        </text>
+      </svg>
+    `;
+
+    // Convertir SVG en PNG avec sharp
+    const pngBuffer = await sharp(Buffer.from(svg))
+      .resize(64, 64) // Taille favicon standard
+      .png()
+      .toBuffer();
+
+    // Déterminer l'ID du site pour le stockage
+    let uploadSiteId = siteId;
+    if (!uploadSiteId) {
+      // Générer un ID temporaire pour les nouveaux sites
+      uploadSiteId = `temp-${Date.now()}`;
+    }
+
+    // Upload vers Supabase Storage
+    const filename = `favicon-${Date.now()}.png`;
+    const url = await uploadBuffer(pngBuffer, uploadSiteId, filename, "image/png");
+
+    if (!url) {
+      return { error: "Échec de l'upload du favicon" };
+    }
+
+    return { url };
+  } catch (error) {
+    console.error("Erreur génération favicon:", error);
+    return { error: "Erreur lors de la génération du favicon" };
   }
 }

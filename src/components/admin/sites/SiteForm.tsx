@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { Site } from "@/types/database";
 import type { SiteFormData } from "@/lib/actions/sites";
-import { generateSiteSEO } from "@/lib/actions/sites";
+import { generateSiteSEO, generateFavicon } from "@/lib/actions/sites";
 
 interface SiteFormProps {
   site?: Site | null;
@@ -31,6 +31,7 @@ export function SiteForm({ site, onSubmit, onCancel, loading }: SiteFormProps) {
   });
 
   const [generatingSEO, setGeneratingSEO] = useState(false);
+  const [generatingFavicon, setGeneratingFavicon] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,6 +60,34 @@ export function SiteForm({ site, onSubmit, onCancel, loading }: SiteFormProps) {
     });
 
     toast.success("SEO généré avec succès");
+  }
+
+  async function handleGenerateFavicon() {
+    if (!formData.name) {
+      toast.error("Veuillez d'abord saisir le nom du site");
+      return;
+    }
+
+    setGeneratingFavicon(true);
+    const result = await generateFavicon(
+      formData.name,
+      formData.primary_color,
+      formData.secondary_color,
+      site?.id
+    );
+    setGeneratingFavicon(false);
+
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+
+    setFormData({
+      ...formData,
+      favicon_url: result.url,
+    });
+
+    toast.success("Favicon généré avec succès");
   }
 
   return (
@@ -107,16 +136,46 @@ export function SiteForm({ site, onSubmit, onCancel, loading }: SiteFormProps) {
       {/* Favicon URL */}
       <div className="space-y-2">
         <Label htmlFor="favicon_url">URL du favicon</Label>
-        <Input
-          id="favicon_url"
-          type="url"
-          value={formData.favicon_url}
-          onChange={(e) => setFormData({ ...formData, favicon_url: e.target.value })}
-          placeholder="https://example.com/favicon.ico"
-        />
-        <p className="text-xs text-gray-500">
-          Format recommandé: .ico, .png ou .svg (32x32 ou 64x64 pixels)
-        </p>
+        <div className="flex gap-2">
+          <Input
+            id="favicon_url"
+            type="url"
+            value={formData.favicon_url}
+            onChange={(e) => setFormData({ ...formData, favicon_url: e.target.value })}
+            placeholder="https://example.com/favicon.ico"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleGenerateFavicon}
+            disabled={generatingFavicon || !formData.name}
+            className="text-purple-600 border-purple-200 hover:bg-purple-50 shrink-0"
+          >
+            {generatingFavicon ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <ImageIcon className="w-4 h-4 mr-1" />
+                Générer
+              </>
+            )}
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          {formData.favicon_url && (
+            <img
+              src={formData.favicon_url}
+              alt="Favicon preview"
+              className="w-6 h-6 border border-gray-200 rounded"
+              onError={(e) => (e.currentTarget.style.display = "none")}
+            />
+          )}
+          <p className="text-xs text-gray-500">
+            Générez automatiquement avec les initiales ou entrez une URL
+          </p>
+        </div>
       </div>
 
       {/* Couleurs */}

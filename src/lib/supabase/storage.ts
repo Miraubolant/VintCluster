@@ -83,6 +83,44 @@ export async function uploadImageFromUrl(
 }
 
 /**
+ * Upload un buffer directement vers Supabase Storage
+ * Utilisé pour les images générées (favicons, etc.)
+ */
+export async function uploadBuffer(
+  buffer: Buffer,
+  siteId: string,
+  filename: string,
+  contentType: string = "image/png"
+): Promise<string | null> {
+  try {
+    const filePath = `${siteId}/${filename}`;
+    const supabase = getStorageClient();
+
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, buffer, {
+        contentType,
+        cacheControl: "31536000",
+        upsert: true, // Remplacer si existe
+      });
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      return null;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error("Error uploading buffer to storage:", error);
+    return null;
+  }
+}
+
+/**
  * Supprime une image du storage
  */
 export async function deleteImageFromStorage(imageUrl: string): Promise<boolean> {
