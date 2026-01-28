@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
 
         try {
           const imagePrompt = generateImagePrompt(generated.title, keyword.keyword);
-          const image = await generateImage(imagePrompt, "flux-schnell");
+          const image = await generateImage(imagePrompt, "flux-schnell", config.site_id);
           if (image) {
             imageUrl = image.url;
             imageAlt = image.alt;

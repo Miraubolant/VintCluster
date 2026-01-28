@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Settings, ChevronDown, ChevronUp, ImageIcon, Tag, Play, Loader2 } from "lucide-react";
 import type { SchedulerConfig } from "@/types/database";
 
@@ -21,6 +22,9 @@ interface SchedulerConfigCardProps {
   onEdit: (config: SchedulerConfigWithSite) => void;
   onRunManually: (siteId: string) => Promise<void>;
   isRunning?: boolean;
+  selected?: boolean;
+  onSelect?: (siteId: string, selected: boolean) => void;
+  selectionMode?: boolean;
 }
 
 const DAYS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -31,6 +35,9 @@ export function SchedulerConfigCard({
   onEdit,
   onRunManually,
   isRunning = false,
+  selected = false,
+  onSelect,
+  selectionMode = false,
 }: SchedulerConfigCardProps) {
   const [expanded, setExpanded] = useState(false);
   const keywordIds = (config.keyword_ids as string[]) || [];
@@ -40,9 +47,17 @@ export function SchedulerConfigCard({
   const publishHours = (config.publish_hours as number[]) || [];
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className={`bg-white rounded-lg border overflow-hidden transition-all ${selected ? "border-indigo-500 ring-2 ring-indigo-200" : "border-gray-200"}`}>
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
+          {selectionMode && onSelect && (
+            <Checkbox
+              checked={selected}
+              onCheckedChange={(checked) => onSelect(config.site_id, checked === true)}
+              disabled={!hasKeywords}
+              className="data-[state=checked]:bg-indigo-600"
+            />
+          )}
           <Switch
             checked={config.enabled || false}
             onCheckedChange={(checked) => onToggle(config.site_id, checked)}

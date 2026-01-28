@@ -264,7 +264,7 @@ export async function runSchedulerManually(
 
     try {
       const imagePrompt = generateImagePrompt(generated.title, keyword.keyword);
-      const image = await generateImage(imagePrompt, "flux-schnell");
+      const image = await generateImage(imagePrompt, "flux-schnell", siteId);
       if (image) {
         imageUrl = image.url;
         imageAlt = image.alt;
@@ -337,3 +337,159 @@ export async function runSchedulerManually(
     return { success: false, error: message };
   }
 }
+
+// Préparer les données pour la génération en masse
+export async function prepareBulkGeneration(
+  siteIds: string[],
+  totalArticles: number
+): Promise<{
+  tasks: Array<{ siteId: string; siteName: string; keywordIds: string[]; autoPublish: boolean; count: number }>;
+  errors: string[];
+}> {
+  if (siteIds.length === 0 || totalArticles <= 0) {
+    return { tasks: [], errors: ["Paramètres invalides"] };
+  }
+
+  const supabase = await createClient();
+  const articlesPerConfig = Math.floor(totalArticles / siteIds.length);
+  const remainder = totalArticles % siteIds.length;
+
+  const tasks: Array<{ siteId: string; siteName: string; keywordIds: string[]; autoPublish: boolean; count: number }> = [];
+  const errors: string[] = [];
+
+  for (let i = 0; i < siteIds.length; i++) {
+    const siteId = siteIds[i];
+    const articlesToGenerate = articlesPerConfig + (i < remainder ? 1 : 0);
+
+    const { data: config } = await supabase
+      .from("scheduler_config")
+      .select("*, site:sites(id, name)")
+      .eq("site_id", siteId)
+      .single();
+
+    if (!config) {
+      errors.push(`Configuration non trouvée pour le site ${siteId}`);
+      continue;
+    }
+
+    const siteName = (config.site as { name: string } | null)?.name || "Site inconnu";
+    const keywordIds = (config.keyword_ids as string[]) || [];
+
+    if (keywordIds.length === 0) {
+      errors.push(`${siteName}: Aucun mot-clé sélectionné`);
+      continue;
+    }
+
+    tasks.push({
+      siteId,
+      siteName,
+      keywordIds,
+      autoPublish: config.auto_publish || false,
+      count: articlesToGenerate,
+    });
+  }
+
+  return { tasks, errors };
+}
+
+// Générer un seul article pour la génération en masse
+export async function generateSingleBulkArticle(
+  siteId: string,
+  keywordIds: string[],
+  autoPublish: boolean
+): Promise<{
+  success: boolean;
+  title?: string;
+  error?: string;
+}> {
+  const supabase = await createClient();
+
+  // Récupérer un mot-clé pending
+  const { data: keyword } = await supabase
+    .from("keywords")
+    .select("*")
+    .in("id", keywordIds)
+    .eq("status", "pending")
+    .order("priority", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!keyword) {
+    return { success: false, error: "Plus de mots-clés disponibles" };
+  }
+
+  // Marquer le mot-clé comme en cours
+  await supabase
+    .from("keywords")
+    .update({ status: "generating" })
+    .eq("id", keyword.id);
+
+  try {
+    // Générer l'article
+    const cluster = keyword.cluster || keyword.site_key || undefined;
+    const generated = await generateArticle(keyword.keyword, cluster);
+
+    // Générer l'image
+    let imageUrl: string | null = null;
+    let imageAlt: string | null = null;
+
+    try {
+      const imagePrompt = generateImagePrompt(generated.title, keyword.keyword);
+      const image = await generateImage(imagePrompt, "flux-schnell", siteId);
+      if (image) {
+        imageUrl = image.url;
+        imageAlt = image.alt;
+      }
+    } catch {
+      // Continue sans image
+    }
+
+    // Créer l'article
+    const { error: articleError } = await supabase
+      .from("articles")
+      .insert({
+        site_id: siteId,
+        keyword_id: keyword.id,
+        title: generated.title,
+        slug: generated.slug,
+        content: generated.content,
+        summary: generated.summary,
+        faq: generated.faq as unknown as Json,
+        image_url: imageUrl,
+        image_alt: imageAlt,
+        status: autoPublish ? "published" : "draft",
+        published_at: autoPublish ? new Date().toISOString() : null,
+      });
+
+    if (articleError) {
+      await supabase
+        .from("keywords")
+        .update({ status: "pending" })
+        .eq("id", keyword.id);
+      return { success: false, error: articleError.message };
+    }
+
+    // Mettre à jour le mot-clé
+    await supabase
+      .from("keywords")
+      .update({ status: autoPublish ? "published" : "generated" })
+      .eq("id", keyword.id);
+
+    return { success: true, title: generated.title };
+  } catch (error) {
+    await supabase
+      .from("keywords")
+      .update({ status: "pending" })
+      .eq("id", keyword.id);
+    const msg = error instanceof Error ? error.message : "Erreur inconnue";
+    return { success: false, error: msg };
+  }
+}
+
+// Finaliser la génération en masse (revalidate paths)
+export async function finalizeBulkGeneration(): Promise<void> {
+  revalidatePath("/admin/scheduler");
+  revalidatePath("/admin/articles");
+  revalidatePath("/admin/keywords");
+}
+

@@ -2,17 +2,23 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, RefreshCw, CheckSquare, X, Rocket, Loader2 } from "lucide-react";
 import {
   SchedulerStats,
   SchedulerConfigCard,
   SchedulerConfigDialog,
+  BulkProgressBar,
+  type BulkProgressState,
 } from "@/components/admin/scheduler";
 import {
   getSchedulerConfigs,
   getSchedulerStats,
   toggleSchedulerEnabled,
   runSchedulerManually,
+  prepareBulkGeneration,
+  generateSingleBulkArticle,
+  finalizeBulkGeneration,
 } from "@/lib/actions/scheduler";
 import { getSites } from "@/lib/actions/sites";
 import { toast } from "sonner";
@@ -39,6 +45,22 @@ export default function SchedulerPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<SchedulerConfigWithSite | null>(null);
   const [runningSiteId, setRunningSiteId] = useState<string | null>(null);
+
+  // Selection mode for bulk generation
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedSiteIds, setSelectedSiteIds] = useState<Set<string>>(new Set());
+  const [bulkArticleCount, setBulkArticleCount] = useState(4);
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+
+  // Progress tracking
+  const [bulkProgress, setBulkProgress] = useState<BulkProgressState>({
+    isRunning: false,
+    total: 0,
+    completed: 0,
+    currentSite: null,
+    errors: [],
+    results: [],
+  });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -93,6 +115,117 @@ export default function SchedulerPage() {
     setDialogOpen(true);
   }
 
+  function handleSelect(siteId: string, selected: boolean) {
+    const newSet = new Set(selectedSiteIds);
+    if (selected) {
+      newSet.add(siteId);
+    } else {
+      newSet.delete(siteId);
+    }
+    setSelectedSiteIds(newSet);
+  }
+
+  function handleSelectAll() {
+    const selectableConfigs = configs.filter(c => {
+      const keywordIds = (c.keyword_ids as string[]) || [];
+      return keywordIds.length > 0;
+    });
+    setSelectedSiteIds(new Set(selectableConfigs.map(c => c.site_id)));
+  }
+
+  function handleDeselectAll() {
+    setSelectedSiteIds(new Set());
+  }
+
+  function toggleSelectionMode() {
+    if (selectionMode) {
+      setSelectedSiteIds(new Set());
+    }
+    setSelectionMode(!selectionMode);
+  }
+
+  async function handleBulkGeneration() {
+    if (selectedSiteIds.size === 0 || bulkArticleCount <= 0) return;
+
+    setBulkGenerating(true);
+    setSelectionMode(false);
+    setSelectedSiteIds(new Set());
+
+    // Préparer les tâches
+    const { tasks, errors: prepErrors } = await prepareBulkGeneration(
+      Array.from(selectedSiteIds),
+      bulkArticleCount
+    );
+
+    // Calculer le total d'articles à générer
+    const totalArticles = tasks.reduce((sum, t) => sum + t.count, 0);
+
+    // Initialiser le progress
+    setBulkProgress({
+      isRunning: true,
+      total: totalArticles,
+      completed: 0,
+      currentSite: null,
+      errors: [...prepErrors],
+      results: [],
+    });
+
+    // Générer article par article
+    for (const task of tasks) {
+      for (let i = 0; i < task.count; i++) {
+        // Update current site
+        setBulkProgress(prev => ({
+          ...prev,
+          currentSite: `${task.siteName} (${i + 1}/${task.count})`,
+        }));
+
+        const result = await generateSingleBulkArticle(
+          task.siteId,
+          task.keywordIds,
+          task.autoPublish
+        );
+
+        if (result.success && result.title) {
+          setBulkProgress(prev => ({
+            ...prev,
+            completed: prev.completed + 1,
+            results: [...prev.results, { siteName: task.siteName, title: result.title! }],
+          }));
+        } else if (result.error) {
+          setBulkProgress(prev => ({
+            ...prev,
+            errors: [...prev.errors, `${task.siteName}: ${result.error}`],
+          }));
+          // Si plus de mots-clés, passer au site suivant
+          if (result.error.includes("Plus de mots-clés")) {
+            break;
+          }
+        }
+      }
+    }
+
+    // Finaliser
+    await finalizeBulkGeneration();
+    setBulkGenerating(false);
+    setBulkProgress(prev => ({
+      ...prev,
+      isRunning: false,
+      currentSite: null,
+    }));
+    loadData();
+  }
+
+  function handleCloseProgress() {
+    setBulkProgress({
+      isRunning: false,
+      total: 0,
+      completed: 0,
+      currentSite: null,
+      errors: [],
+      results: [],
+    });
+  }
+
   // Sites sans configuration
   const configuredSiteIds = configs.map((c) => c.site_id);
   const unconfiguredSites = sites.filter(
@@ -120,6 +253,17 @@ export default function SchedulerPage() {
             />
             Actualiser
           </Button>
+          {configs.length > 0 && (
+            <Button
+              variant={selectionMode ? "default" : "outline"}
+              size="sm"
+              onClick={toggleSelectionMode}
+              className={selectionMode ? "bg-indigo-600 hover:bg-indigo-700" : ""}
+            >
+              <CheckSquare className="h-4 w-4 mr-2" />
+              {selectionMode ? "Annuler" : "Sélectionner"}
+            </Button>
+          )}
           {unconfiguredSites.length > 0 && (
             <Button onClick={handleAdd}>
               <Plus className="h-4 w-4 mr-2" />
@@ -159,6 +303,9 @@ export default function SchedulerPage() {
                 onEdit={handleEdit}
                 onRunManually={handleRunManually}
                 isRunning={runningSiteId === config.site_id}
+                selectionMode={selectionMode}
+                selected={selectedSiteIds.has(config.site_id)}
+                onSelect={handleSelect}
               />
             ))}
           </div>
@@ -172,6 +319,86 @@ export default function SchedulerPage() {
         sites={unconfiguredSites}
         onSuccess={loadData}
       />
+
+      {/* Floating action bar for bulk generation */}
+      {selectionMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-2xl p-4 flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-medium text-gray-700">
+                {selectedSiteIds.size} config(s) sélectionnée(s)
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAll}
+                className="text-xs"
+              >
+                Tout
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeselectAll}
+                className="text-xs"
+              >
+                Aucun
+              </Button>
+            </div>
+
+            <div className="h-8 w-px bg-gray-200" />
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Articles total:</span>
+              <Input
+                type="number"
+                min={1}
+                max={50}
+                value={bulkArticleCount}
+                onChange={(e) => setBulkArticleCount(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-20 h-9"
+              />
+              {selectedSiteIds.size > 0 && (
+                <span className="text-xs text-gray-500">
+                  (~{Math.floor(bulkArticleCount / selectedSiteIds.size)} par config)
+                </span>
+              )}
+            </div>
+
+            <div className="h-8 w-px bg-gray-200" />
+
+            <Button
+              onClick={handleBulkGeneration}
+              disabled={selectedSiteIds.size === 0 || bulkGenerating}
+              className="bg-indigo-600 hover:bg-indigo-700 gap-2"
+            >
+              {bulkGenerating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Rocket className="h-4 w-4" />
+              )}
+              {bulkGenerating ? "Génération..." : "Lancer"}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSelectionMode}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Progress bar for bulk generation */}
+      {(bulkProgress.isRunning || bulkProgress.completed > 0) && (
+        <BulkProgressBar
+          progress={bulkProgress}
+          onClose={handleCloseProgress}
+        />
+      )}
     </div>
   );
 }

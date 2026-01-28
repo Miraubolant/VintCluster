@@ -1,4 +1,5 @@
 import { getReplicateClient } from "./client";
+import { uploadImageFromUrl } from "@/lib/supabase/storage";
 
 export type ImageModel = "flux-schnell" | "flux-dev" | "sdxl";
 
@@ -35,10 +36,14 @@ export const MODEL_INFO: Record<ImageModel, { name: string; description: string;
 
 /**
  * Génère une image via Replicate basée sur un prompt
+ * @param prompt - Le prompt pour générer l'image
+ * @param model - Le modèle à utiliser (flux-schnell par défaut)
+ * @param siteId - Si fourni, l'image est persistée dans Supabase Storage
  */
 export async function generateImage(
   prompt: string,
-  model: ImageModel = "flux-schnell"
+  model: ImageModel = "flux-schnell",
+  siteId?: string
 ): Promise<ImageGenerationResult | null> {
   const apiToken = process.env.REPLICATE_API_TOKEN;
 
@@ -82,15 +87,26 @@ export async function generateImage(
     }
 
     // Le résultat peut être un tableau ou une URL directe
-    const imageUrl = Array.isArray(output) ? output[0] : output;
+    const tempImageUrl = Array.isArray(output) ? output[0] : output;
 
-    if (!imageUrl || typeof imageUrl !== "string") {
+    if (!tempImageUrl || typeof tempImageUrl !== "string") {
       console.error("No image URL returned from Replicate");
       return null;
     }
 
+    // Si un siteId est fourni, persister l'image dans Supabase Storage
+    let finalImageUrl = tempImageUrl;
+    if (siteId) {
+      const storedUrl = await uploadImageFromUrl(tempImageUrl, siteId);
+      if (storedUrl) {
+        finalImageUrl = storedUrl;
+      } else {
+        console.warn("Failed to persist image to storage, using temporary URL");
+      }
+    }
+
     return {
-      url: imageUrl,
+      url: finalImageUrl,
       alt: prompt,
     };
   } catch (error) {

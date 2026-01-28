@@ -602,10 +602,10 @@ export async function generateArticleImage(
 ): Promise<{ url?: string; alt?: string; error?: string }> {
   const supabase = await createClient();
 
-  // Récupérer l'article
+  // Récupérer l'article avec son site_id
   const { data: article, error: fetchError } = await supabase
     .from("articles")
-    .select("title, keyword:keywords(keyword)")
+    .select("title, site_id, keyword:keywords(keyword)")
     .eq("id", articleId)
     .single();
 
@@ -618,8 +618,8 @@ export async function generateArticleImage(
     const keyword = (article.keyword as { keyword: string } | null)?.keyword;
     const prompt = customPrompt || generateImagePrompt(article.title, keyword);
 
-    // Générer l'image
-    const image = await generateImage(prompt, model);
+    // Générer l'image et la persister dans Supabase Storage
+    const image = await generateImage(prompt, model, article.site_id);
 
     if (!image) {
       return { error: "Échec de la génération d'image" };
