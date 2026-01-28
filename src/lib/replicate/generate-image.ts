@@ -15,6 +15,31 @@ const MODELS: Record<ImageModel, string> = {
   "sdxl": "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
 };
 
+// Prompts génériques pour images de blog mode/seconde main
+const FASHION_PROMPTS = [
+  "Aesthetic flat lay of vintage clothing items on white marble surface, pastel colors, designer pieces, silk scarves, leather accessories, soft natural lighting, editorial fashion photography",
+  "Minimalist clothing rack with curated second-hand fashion pieces, neutral tones, wooden hangers, soft morning light, scandinavian interior style, professional product photography",
+  "Organized wardrobe with neatly folded sweaters and hanging dresses, warm ambient lighting, cozy atmosphere, lifestyle photography, shallow depth of field",
+  "Close-up of luxury fabric textures, silk, cashmere, denim details, artistic macro photography, soft shadows, neutral background, high-end fashion editorial",
+  "Stylish second-hand boutique interior, exposed brick walls, golden hour sunlight through windows, vintage clothing displays, warm inviting atmosphere",
+  "Fashion accessories arrangement, vintage handbags, sunglasses, jewelry on velvet surface, elegant composition, studio lighting, luxury editorial style",
+  "Colorful vintage dresses hanging on antique wooden wardrobe, soft pastel palette, dreamy ethereal lighting, romantic aesthetic",
+  "Modern capsule wardrobe concept, neutral toned clothing pieces, minimalist aesthetic, clean white background, lifestyle photography",
+  "Stack of folded denim jeans and cotton shirts, rustic wooden surface, natural lighting, casual lifestyle photography, warm earth tones",
+  "Elegant coat collection on brass clothing rack, winter fashion, wool textures, sophisticated boutique atmosphere, editorial lighting",
+  "Vintage jewelry box with curated accessories, pearls, gold chains, watches, soft velvet interior, intimate close-up photography",
+  "Fashion mood board aesthetic, fabric swatches, vintage photographs, dried flowers, creative flat lay composition, artistic styling",
+  "Sustainable fashion concept, eco-friendly clothing tags, organic cotton textures, green plants, natural materials, conscious lifestyle",
+  "Designer shoes collection, leather loafers, vintage heels, wooden shelf display, warm interior lighting, luxury retail aesthetic",
+  "Cozy knitwear collection, chunky sweaters, wool scarves, autumn color palette, soft textures, hygge lifestyle photography",
+];
+
+// Sélectionne un prompt aléatoire pour varier les images
+function getRandomFashionPrompt(): string {
+  const index = Math.floor(Math.random() * FASHION_PROMPTS.length);
+  return FASHION_PROMPTS[index];
+}
+
 // Descriptions des modèles pour l'UI
 export const MODEL_INFO: Record<ImageModel, { name: string; description: string; speed: string }> = {
   "flux-schnell": {
@@ -53,12 +78,14 @@ export async function generateImage(
   }
 
   try {
-    console.log("Starting image generation:", { model, siteId: siteId || "none", promptPreview: prompt.substring(0, 50) });
+    console.log("Starting image generation:", { model, siteId: siteId || "none" });
     const replicate = getReplicateClient();
     const modelId = MODELS[model];
 
-    // Améliorer le prompt pour de meilleures images de blog (sans texte)
-    const enhancedPrompt = `Professional blog header image: ${prompt}. High quality, modern, clean design, suitable for web article header, 16:9 aspect ratio, vibrant colors, professional photography style. NO TEXT, NO WORDS, NO LETTERS, NO WRITING, NO TYPOGRAPHY in the image`;
+    // Utiliser un prompt générique mode/seconde main au lieu du titre de l'article
+    // Le paramètre 'prompt' est ignoré, on utilise des prompts pré-définis de qualité
+    const fashionPrompt = getRandomFashionPrompt();
+    const enhancedPrompt = `${fashionPrompt}, professional blog header image, 16:9 aspect ratio, high quality, sharp focus, no text, no words, no letters, no watermarks`;
 
     let output: unknown;
 
@@ -66,7 +93,7 @@ export async function generateImage(
       output = await replicate.run(modelId as `${string}/${string}:${string}`, {
         input: {
           prompt: enhancedPrompt,
-          negative_prompt: "blurry, low quality, distorted, watermark, text, logo, ugly, deformed",
+          negative_prompt: "blurry, low quality, distorted, watermark, text, words, letters, logo, writing, typography, ugly, deformed, cartoon, anime, illustration",
           width: 1024,
           height: 576,
           num_outputs: 1,
@@ -124,18 +151,15 @@ export async function generateImage(
 }
 
 /**
- * Génère un prompt d'image optimisé basé sur le titre de l'article
+ * Génère le texte alt pour l'image basé sur le titre de l'article
+ * Note: L'image générée utilise des prompts génériques mode/seconde main,
+ * mais le texte alt reste lié au contenu de l'article pour le SEO
  */
 export function generateImagePrompt(articleTitle: string, keyword?: string): string {
-  // Nettoyer le titre pour en faire un bon prompt
+  // Retourner le titre nettoyé pour le texte alt (SEO)
   const cleanTitle = articleTitle
     .replace(/[?!:]/g, "")
-    .replace(/\d+/g, "")
     .trim();
 
-  const basePrompt = keyword
-    ? `${keyword}, ${cleanTitle}`
-    : cleanTitle;
-
-  return basePrompt;
+  return keyword ? `${keyword} - ${cleanTitle}` : cleanTitle;
 }
