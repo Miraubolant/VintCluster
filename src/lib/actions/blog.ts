@@ -57,7 +57,7 @@ export const getSiteByDomain = unstable_cache(
     return data as Site;
   },
   ["site-by-domain"],
-  { revalidate: 3600, tags: ["sites"] }
+  { revalidate: 60, tags: ["sites"] }
 );
 
 // Récupérer les articles publiés d'un site (avec cache)
