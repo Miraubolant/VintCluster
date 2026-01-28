@@ -61,21 +61,22 @@ export async function GET(request: NextRequest) {
     let faqAnalysis: Record<string, unknown> = { hasFaq: false };
     if (article.faq) {
       const faqType = typeof article.faq;
-      const isArray = Array.isArray(article.faq);
+      const faqArray = Array.isArray(article.faq) ? article.faq : null;
 
       faqAnalysis = {
         hasFaq: true,
         faqType,
-        isArray,
-        faqLength: isArray ? article.faq.length : null,
+        isArray: !!faqArray,
+        faqLength: faqArray ? faqArray.length : null,
         faqRaw: JSON.stringify(article.faq).substring(0, 500),
       };
 
-      if (isArray && article.faq.length > 0) {
-        faqAnalysis.firstItem = article.faq[0];
-        faqAnalysis.firstItemType = typeof article.faq[0];
-        faqAnalysis.hasQuestion = "question" in (article.faq[0] || {});
-        faqAnalysis.hasAnswer = "answer" in (article.faq[0] || {});
+      if (faqArray && faqArray.length > 0) {
+        const firstItem = faqArray[0] as Record<string, unknown>;
+        faqAnalysis.firstItem = firstItem;
+        faqAnalysis.firstItemType = typeof firstItem;
+        faqAnalysis.hasQuestion = "question" in (firstItem || {});
+        faqAnalysis.hasAnswer = "answer" in (firstItem || {});
       }
     }
 
