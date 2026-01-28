@@ -23,6 +23,7 @@ export function SiteForm({ site, onSubmit, onCancel, loading }: SiteFormProps) {
     domain: site?.domain || "",
     name: site?.name || "",
     logo_url: site?.logo_url || "",
+    favicon_url: site?.favicon_url || "",
     primary_color: site?.primary_color || "#000000",
     secondary_color: site?.secondary_color || "#FFFFFF",
     meta_title: site?.meta_title || "",
@@ -100,6 +101,21 @@ export function SiteForm({ site, onSubmit, onCancel, loading }: SiteFormProps) {
         />
         <p className="text-xs text-gray-500">
           Laissez vide pour afficher les initiales du site en badge géométrique
+        </p>
+      </div>
+
+      {/* Favicon URL */}
+      <div className="space-y-2">
+        <Label htmlFor="favicon_url">URL du favicon</Label>
+        <Input
+          id="favicon_url"
+          type="url"
+          value={formData.favicon_url}
+          onChange={(e) => setFormData({ ...formData, favicon_url: e.target.value })}
+          placeholder="https://example.com/favicon.ico"
+        />
+        <p className="text-xs text-gray-500">
+          Format recommandé: .ico, .png ou .svg (32x32 ou 64x64 pixels)
         </p>
       </div>
 

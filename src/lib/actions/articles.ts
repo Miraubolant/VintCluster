@@ -3,9 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { generateArticle } from "@/lib/openai";
-import { searchUnsplashImage } from "@/lib/unsplash";
+import { generateImage, generateImagePrompt, type ImageModel } from "@/lib/replicate";
 import { generateSlug } from "@/lib/utils/slug";
 import type { Article, ArticleStatus, Json } from "@/types/database";
+
+// Options pour la génération d'image
+export interface ImageOptions {
+  source: "none" | "ai" | "url";
+  customUrl?: string;
+  model?: ImageModel;
+}
 
 interface ArticleWithKeyword extends Article {
   keyword?: {
@@ -88,7 +95,8 @@ export async function getArticleStats(siteId?: string): Promise<{
 }
 
 export async function generateArticleFromKeyword(
-  keywordId: string
+  keywordId: string,
+  imageOptions?: ImageOptions
 ): Promise<{ data?: Article; error?: string }> {
   const supabase = await createClient();
 
@@ -119,8 +127,22 @@ export async function generateArticleFromKeyword(
     const cluster = keyword.cluster || keyword.site_key || undefined;
     const generated = await generateArticle(keyword.keyword, cluster);
 
-    // Rechercher une image sur Unsplash
-    const image = await searchUnsplashImage(keyword.keyword);
+    // Gérer l'image selon les options
+    let imageUrl: string | null = null;
+    let imageAlt: string | null = null;
+
+    if (imageOptions?.source === "url" && imageOptions.customUrl) {
+      imageUrl = imageOptions.customUrl;
+      imageAlt = generated.title;
+    } else if (imageOptions?.source === "ai") {
+      const prompt = generateImagePrompt(generated.title, keyword.keyword);
+      const image = await generateImage(prompt, imageOptions.model || "flux-schnell");
+      if (image) {
+        imageUrl = image.url;
+        imageAlt = image.alt;
+      }
+    }
+    // Si source === "none" ou non défini, pas d'image
 
     // Créer l'article
     const { data: article, error: articleError } = await supabase
@@ -133,8 +155,8 @@ export async function generateArticleFromKeyword(
         content: generated.content,
         summary: generated.summary,
         faq: generated.faq as unknown as Json,
-        image_url: image?.url || null,
-        image_alt: image?.alt || null,
+        image_url: imageUrl,
+        image_alt: imageAlt,
         status: "draft",
       })
       .select()
@@ -497,7 +519,8 @@ export async function createManualArticle(data: {
 // Générer un article IA à partir d'un topic libre (pour un site spécifique)
 export async function generateArticleFromTopic(
   siteId: string,
-  topic: string
+  topic: string,
+  imageOptions?: ImageOptions
 ): Promise<{ data?: Article; error?: string }> {
   const supabase = await createClient();
 
@@ -505,8 +528,22 @@ export async function generateArticleFromTopic(
     // Générer l'article avec OpenAI
     const generated = await generateArticle(topic);
 
-    // Rechercher une image sur Unsplash
-    const image = await searchUnsplashImage(topic);
+    // Gérer l'image selon les options
+    let imageUrl: string | null = null;
+    let imageAlt: string | null = null;
+
+    if (imageOptions?.source === "url" && imageOptions.customUrl) {
+      imageUrl = imageOptions.customUrl;
+      imageAlt = generated.title;
+    } else if (imageOptions?.source === "ai") {
+      const prompt = generateImagePrompt(generated.title, topic);
+      const image = await generateImage(prompt, imageOptions.model || "flux-schnell");
+      if (image) {
+        imageUrl = image.url;
+        imageAlt = image.alt;
+      }
+    }
+    // Si source === "none" ou non défini, pas d'image
 
     // Vérifier que le slug est unique pour ce site
     const { data: existing } = await supabase
@@ -528,8 +565,8 @@ export async function generateArticleFromTopic(
         content: generated.content,
         summary: generated.summary,
         faq: generated.faq as unknown as Json,
-        image_url: image?.url || null,
-        image_alt: image?.alt || null,
+        image_url: imageUrl,
+        image_alt: imageAlt,
         status: "draft",
       })
       .select()

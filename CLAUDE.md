@@ -29,7 +29,7 @@ Les articles générés doivent promouvoir ces 3 produits SaaS avec des **CTA cl
 - **Base de données**: Supabase PostgreSQL
 - **Authentification**: Supabase Auth (single user admin)
 - **Génération IA**: OpenAI GPT-4o API
-- **Images**: Unsplash API (hotlink direct)
+- **Images**: Replicate API (FLUX, SDXL - génération IA)
 - **Scheduling**: API Routes + External Cron (Coolify/Ofelia)
 - **Déploiement**: Docker + Coolify (self-hosted)
 - **Styling**: Tailwind CSS + shadcn/ui
@@ -144,6 +144,7 @@ CREATE TABLE sites (
   name TEXT NOT NULL,
   domain TEXT NOT NULL UNIQUE,
   logo_url TEXT,                        -- URL du logo (optionnel)
+  favicon_url TEXT,                     -- URL du favicon (optionnel)
   primary_color TEXT DEFAULT '#FFE500',
   secondary_color TEXT DEFAULT '#000000',
   meta_title TEXT,                      -- Titre SEO (optionnel)
@@ -246,7 +247,9 @@ src/
 │   ├── openai/              # Génération IA
 │   │   ├── client.ts
 │   │   └── generate-article.ts
-│   ├── unsplash/            # Images
+│   ├── replicate/           # Génération d'images IA
+│   │   ├── client.ts
+│   │   ├── generate-image.ts
 │   │   └── index.ts
 │   └── validations/         # Schemas Zod
 │       └── index.ts
@@ -280,8 +283,17 @@ src/
 - `getArticles(filters)` - Liste avec filtres
 - `getArticleStats(siteId)` - Statistiques
 - `getArticleById(id)` - Récupère un article avec keyword et site
-- `generateArticleFromKeyword(keywordId)` - Génération IA depuis keyword lié à un site
-- `generateArticleFromTopic(siteId, topic)` - Génération IA depuis topic libre
+- `generateArticleFromKeyword(keywordId, imageOptions?)` - Génération IA depuis keyword lié à un site
+- `generateArticleFromTopic(siteId, topic, imageOptions?)` - Génération IA depuis topic libre
+
+ImageOptions:
+```typescript
+interface ImageOptions {
+  source: "none" | "ai" | "url";  // Type de source d'image
+  customUrl?: string;              // URL si source === "url"
+  model?: "flux-schnell" | "flux-dev" | "sdxl";  // Modèle si source === "ai"
+}
+```
 - `createManualArticle(data)` - Création manuelle d'article
 - `updateArticleStatus(id, status)` - Publication
 - `updateArticle(id, data)` - Modification
@@ -307,8 +319,8 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 # OpenAI
 OPENAI_API_KEY=sk-...
 
-# Unsplash
-UNSPLASH_ACCESS_KEY=...
+# Replicate (Image Generation)
+REPLICATE_API_TOKEN=r8_...
 
 # App Config
 NEXT_PUBLIC_ADMIN_DOMAIN=admin.votredomaine.com
@@ -389,7 +401,7 @@ docker-compose up -d
 
 3. Générer Articles (admin/keywords ou cron)
    └─► OpenAI GPT-4o génère titre, contenu, summary, FAQ
-   └─► Unsplash récupère image
+   └─► Replicate génère image (FLUX/SDXL) ou URL personnalisée
    └─► Status keyword: generating → generated
    └─► Article créé en draft
 

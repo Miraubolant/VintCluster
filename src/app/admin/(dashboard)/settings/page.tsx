@@ -37,7 +37,7 @@ export default async function SettingsPage() {
           <div>
             <h3 className="font-medium text-gray-900">Clés API & Configuration</h3>
             <p className="text-sm text-gray-500 mt-1">
-              Les clés API (OpenAI, Unsplash) et les paramètres de configuration sont gérés
+              Les clés API (OpenAI, Replicate) et les paramètres de configuration sont gérés
               de manière sécurisée via les variables d&apos;environnement sur le serveur.
               Contactez votre administrateur système pour les modifier.
             </p>
@@ -47,7 +47,7 @@ export default async function SettingsPage() {
               </p>
               <ul className="mt-1 space-y-1 text-gray-500">
                 <li>• OPENAI_API_KEY - Génération d&apos;articles IA</li>
-                <li>• UNSPLASH_ACCESS_KEY - Images d&apos;articles</li>
+                <li>• REPLICATE_API_TOKEN - Génération d&apos;images IA</li>
                 <li>• CRON_SECRET - Sécurisation des tâches planifiées</li>
               </ul>
             </div>

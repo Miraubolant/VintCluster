@@ -6,7 +6,7 @@ Plateforme de génération de blogs IA multi-sites avec architecture multi-tenan
 
 - **Multi-sites** : Gérez 20+ blogs depuis un seul panneau d'administration
 - **Génération IA** : Articles générés automatiquement avec GPT-4o
-- **Images Unsplash** : Images intégrées automatiquement via hotlink
+- **Images IA** : Génération d'images via Replicate (FLUX, SDXL)
 - **FAQ automatique** : Questions/réponses générées pour chaque article
 - **Planification** : Publication automatique programmable par site
 - **ISR** : Régénération incrémentale pour des performances optimales
@@ -17,7 +17,7 @@ Plateforme de génération de blogs IA multi-sites avec architecture multi-tenan
 - **Frontend** : Next.js 16, React 19, TailwindCSS, shadcn/ui
 - **Backend** : Supabase (PostgreSQL, Auth, RLS)
 - **IA** : OpenAI GPT-4o
-- **Images** : Unsplash API
+- **Images** : Replicate API (FLUX, SDXL)
 - **Déploiement** : Docker, Coolify
 
 ## Architecture
@@ -49,7 +49,7 @@ Plateforme de génération de blogs IA multi-sites avec architecture multi-tenan
 - Node.js 20+
 - Compte Supabase
 - Clé API OpenAI
-- Clé API Unsplash
+- Clé API Replicate
 
 ### 1. Cloner et installer
 
@@ -100,7 +100,7 @@ npm start
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé anonyme Supabase | Oui |
 | `SUPABASE_SERVICE_ROLE_KEY` | Clé service role Supabase | Oui |
 | `OPENAI_API_KEY` | Clé API OpenAI | Oui |
-| `UNSPLASH_ACCESS_KEY` | Clé API Unsplash | Oui |
+| `REPLICATE_API_TOKEN` | Token API Replicate | Oui |
 | `NEXT_PUBLIC_ADMIN_DOMAIN` | Domaine admin | Oui |
 | `CRON_SECRET` | Secret pour les cron jobs | Oui |
 | `REVALIDATION_SECRET` | Secret pour la revalidation | Oui |
@@ -133,7 +133,7 @@ src/
 │   ├── actions/          # Server Actions
 │   ├── openai/           # Intégration OpenAI
 │   ├── supabase/         # Client Supabase
-│   ├── unsplash/         # Intégration Unsplash
+│   ├── replicate/        # Génération d'images IA
 │   └── validations/      # Schemas Zod
 └── types/                # Types TypeScript
 ```

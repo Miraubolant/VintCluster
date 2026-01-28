@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Settings, ChevronDown, ChevronUp } from "lucide-react";
+import { Settings, ChevronDown, ChevronUp, ImageIcon } from "lucide-react";
 import type { SchedulerConfig } from "@/types/database";
 
 interface SchedulerConfigWithSite extends SchedulerConfig {
@@ -92,6 +92,13 @@ export function SchedulerConfigCard({
               <p className="font-medium">
                 {config.auto_publish ? "Oui" : "Non"}
               </p>
+            </div>
+            <div>
+              <p className="text-gray-500 mb-1">Images IA</p>
+              <div className="flex items-center gap-1">
+                <ImageIcon className="h-3.5 w-3.5 text-purple-600" />
+                <p className="font-medium text-purple-700">FLUX Schnell</p>
+              </div>
             </div>
             <div>
               <p className="text-gray-500 mb-1">Jours actifs</p>

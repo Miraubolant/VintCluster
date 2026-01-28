@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { generateArticle } from "@/lib/openai";
-import { searchUnsplashImage } from "@/lib/unsplash";
+import { generateImage, generateImagePrompt } from "@/lib/replicate";
 import type { Database, Json } from "@/types/supabase";
 
 // Créer un client Supabase avec service role pour bypasser RLS
@@ -93,11 +93,29 @@ export async function GET(request: NextRequest) {
         .eq("id", keyword.id);
 
       try {
-        // Générer l'article
-        const generated = await generateArticle(keyword.keyword);
-        const image = await searchUnsplashImage(keyword.keyword);
+        // Générer l'article avec OpenAI (passer le cluster pour les CTA)
+        const cluster = keyword.cluster || keyword.site_key || undefined;
+        const generated = await generateArticle(keyword.keyword, cluster);
 
-        // Créer l'article
+        // Générer une image avec Replicate (FLUX Schnell pour la rapidité)
+        let imageUrl: string | null = null;
+        let imageAlt: string | null = null;
+        let imageGenerated = false;
+
+        try {
+          const imagePrompt = generateImagePrompt(generated.title, keyword.keyword);
+          const image = await generateImage(imagePrompt, "flux-schnell");
+          if (image) {
+            imageUrl = image.url;
+            imageAlt = image.alt;
+            imageGenerated = true;
+          }
+        } catch (imageError) {
+          // Si la génération d'image échoue, on continue sans image
+          console.error("Image generation failed:", imageError);
+        }
+
+        // Créer l'article (avec ou sans image)
         const { data: article, error: articleError } = await supabase
           .from("articles")
           .insert({
@@ -108,8 +126,8 @@ export async function GET(request: NextRequest) {
             content: generated.content,
             summary: generated.summary,
             faq: generated.faq as unknown as Json,
-            image_url: image?.url || null,
-            image_alt: image?.alt || null,
+            image_url: imageUrl,
+            image_alt: imageAlt,
             status: config.auto_publish ? "published" : "draft",
             published_at: config.auto_publish ? new Date().toISOString() : null,
           })
@@ -131,7 +149,7 @@ export async function GET(request: NextRequest) {
           .update({ status: config.auto_publish ? "published" : "generated" })
           .eq("id", keyword.id);
 
-        // Logger l'activité
+        // Logger l'activité avec infos image
         await supabase.from("activity_logs").insert({
           site_id: config.site_id,
           type: "article_generated",
@@ -139,7 +157,10 @@ export async function GET(request: NextRequest) {
           metadata: {
             article_id: article.id,
             keyword: keyword.keyword,
+            cluster: cluster || null,
             auto_published: config.auto_publish,
+            image_generated: imageGenerated,
+            image_model: imageGenerated ? "flux-schnell" : null,
           } as unknown as Json,
         });
 

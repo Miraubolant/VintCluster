@@ -1,1 +1,0 @@
-export { searchUnsplashImage } from "./client";

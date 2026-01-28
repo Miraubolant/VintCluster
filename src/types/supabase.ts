@@ -244,6 +244,7 @@ export type Database = {
         Row: {
           created_at: string | null
           domain: string
+          favicon_url: string | null
           id: string
           logo_url: string | null
           meta_description: string | null
@@ -256,6 +257,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           domain: string
+          favicon_url?: string | null
           id?: string
           logo_url?: string | null
           meta_description?: string | null
@@ -268,6 +270,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           domain?: string
+          favicon_url?: string | null
           id?: string
           logo_url?: string | null
           meta_description?: string | null

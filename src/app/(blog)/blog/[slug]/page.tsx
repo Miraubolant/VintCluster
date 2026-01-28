@@ -44,6 +44,7 @@ export async function generateMetadata({
     metadataBase: new URL(baseUrl),
     title: `${article.title} | ${site.name}`,
     description: article.summary || article.title,
+    icons: site.favicon_url ? { icon: site.favicon_url } : undefined,
     alternates: {
       canonical: `/blog/${slug}`,
     },

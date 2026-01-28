@@ -21,9 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Sparkles, Search, FileText } from "lucide-react";
-import { generateArticleFromTopic, generateArticleFromKeyword } from "@/lib/actions/articles";
+import { Loader2, Sparkles, Search, FileText, Image, Link, ImageOff } from "lucide-react";
+import { generateArticleFromTopic, generateArticleFromKeyword, type ImageOptions } from "@/lib/actions/articles";
 import { getAvailableKeywords } from "@/lib/actions/keywords";
+import { MODEL_INFO, type ImageModel } from "@/lib/replicate";
 import { toast } from "sonner";
 import type { Site, Keyword } from "@/types/database";
 
@@ -41,6 +42,8 @@ interface GenerateArticleDialogProps {
   onSuccess?: () => void;
 }
 
+type ImageSource = "none" | "ai" | "url";
+
 export function GenerateArticleDialog({
   sites,
   children,
@@ -55,6 +58,11 @@ export function GenerateArticleDialog({
   const [keywords, setKeywords] = useState<KeywordWithSite[]>([]);
   const [keywordSearch, setKeywordSearch] = useState("");
   const [mode, setMode] = useState<"keyword" | "topic">("keyword");
+
+  // Image options
+  const [imageSource, setImageSource] = useState<ImageSource>("ai");
+  const [imageModel, setImageModel] = useState<ImageModel>("flux-schnell");
+  const [customImageUrl, setCustomImageUrl] = useState("");
 
   // Charger les keywords disponibles à l'ouverture
   useEffect(() => {
@@ -77,7 +85,17 @@ export function GenerateArticleDialog({
     kw.keyword.toLowerCase().includes(keywordSearch.toLowerCase())
   );
 
+  function getImageOptions(): ImageOptions {
+    return {
+      source: imageSource,
+      customUrl: imageSource === "url" ? customImageUrl : undefined,
+      model: imageSource === "ai" ? imageModel : undefined,
+    };
+  }
+
   async function handleGenerate() {
+    const imageOptions = getImageOptions();
+
     if (mode === "keyword") {
       if (!selectedKeywordId) {
         toast.error("Veuillez sélectionner un mot-clé");
@@ -101,9 +119,9 @@ export function GenerateArticleDialog({
       // Sinon, utiliser generateArticleFromTopic avec le keyword comme topic
       let result;
       if (selectedKeyword?.site_id) {
-        result = await generateArticleFromKeyword(selectedKeywordId);
+        result = await generateArticleFromKeyword(selectedKeywordId, imageOptions);
       } else {
-        result = await generateArticleFromTopic(targetSiteId, selectedKeyword!.keyword);
+        result = await generateArticleFromTopic(targetSiteId, selectedKeyword!.keyword, imageOptions);
       }
 
       setLoading(false);
@@ -124,7 +142,7 @@ export function GenerateArticleDialog({
       }
 
       setLoading(true);
-      const result = await generateArticleFromTopic(siteId, topic.trim());
+      const result = await generateArticleFromTopic(siteId, topic.trim(), imageOptions);
       setLoading(false);
 
       if (result.error) {
@@ -145,6 +163,9 @@ export function GenerateArticleDialog({
     setSelectedKeywordId("");
     setKeywordSearch("");
     setMode("keyword");
+    setImageSource("ai");
+    setImageModel("flux-schnell");
+    setCustomImageUrl("");
   }
 
   const selectedKeyword = keywords.find((k) => k.id === selectedKeywordId);
@@ -153,7 +174,7 @@ export function GenerateArticleDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => o ? setOpen(true) : handleClose()}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-indigo-500" />
@@ -314,6 +335,104 @@ export function GenerateArticleDialog({
           </TabsContent>
         </Tabs>
 
+        {/* Image Options Section */}
+        <div className="border rounded-lg p-4 mt-4 space-y-4 bg-gray-50">
+          <Label className="text-sm font-semibold">Image de l&apos;article</Label>
+
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => setImageSource("none")}
+              className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                imageSource === "none"
+                  ? "border-indigo-500 bg-indigo-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+              disabled={loading}
+            >
+              <ImageOff className={`w-5 h-5 ${imageSource === "none" ? "text-indigo-600" : "text-gray-500"}`} />
+              <span className={`text-xs font-medium ${imageSource === "none" ? "text-indigo-600" : "text-gray-600"}`}>
+                Pas d&apos;image
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setImageSource("ai")}
+              className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                imageSource === "ai"
+                  ? "border-indigo-500 bg-indigo-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+              disabled={loading}
+            >
+              <Sparkles className={`w-5 h-5 ${imageSource === "ai" ? "text-indigo-600" : "text-gray-500"}`} />
+              <span className={`text-xs font-medium ${imageSource === "ai" ? "text-indigo-600" : "text-gray-600"}`}>
+                Générer (IA)
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setImageSource("url")}
+              className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                imageSource === "url"
+                  ? "border-indigo-500 bg-indigo-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+              disabled={loading}
+            >
+              <Link className={`w-5 h-5 ${imageSource === "url" ? "text-indigo-600" : "text-gray-500"}`} />
+              <span className={`text-xs font-medium ${imageSource === "url" ? "text-indigo-600" : "text-gray-600"}`}>
+                URL personnalisée
+              </span>
+            </button>
+          </div>
+
+          {/* AI Model Selection */}
+          {imageSource === "ai" && (
+            <div className="space-y-2">
+              <Label className="text-xs">Modèle de génération</Label>
+              <Select value={imageModel} onValueChange={(v) => setImageModel(v as ImageModel)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(MODEL_INFO) as ImageModel[]).map((model) => (
+                    <SelectItem key={model} value={model}>
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <span className="font-medium">{MODEL_INFO[model].name}</span>
+                          <span className="text-xs text-gray-500 ml-2">({MODEL_INFO[model].speed})</span>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                {MODEL_INFO[imageModel].description}
+              </p>
+            </div>
+          )}
+
+          {/* Custom URL Input */}
+          {imageSource === "url" && (
+            <div className="space-y-2">
+              <Label className="text-xs">URL de l&apos;image</Label>
+              <Input
+                value={customImageUrl}
+                onChange={(e) => setCustomImageUrl(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                disabled={loading}
+              />
+              <p className="text-xs text-gray-500">
+                L&apos;image doit être accessible publiquement.
+              </p>
+            </div>
+          )}
+        </div>
+
         {loading && (
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mt-4">
             <div className="flex items-center gap-3">
@@ -323,7 +442,9 @@ export function GenerateArticleDialog({
                   Génération en cours...
                 </p>
                 <p className="text-sm text-indigo-600">
-                  L&apos;IA rédige votre article, cela peut prendre quelques secondes.
+                  {imageSource === "ai"
+                    ? "L'IA génère votre article et votre image, cela peut prendre quelques secondes."
+                    : "L'IA rédige votre article, cela peut prendre quelques secondes."}
                 </p>
               </div>
             </div>
@@ -344,7 +465,8 @@ export function GenerateArticleDialog({
             disabled={
               loading ||
               (mode === "keyword" && (!selectedKeywordId || (needsSiteSelection && !siteId))) ||
-              (mode === "topic" && (!siteId || !topic.trim()))
+              (mode === "topic" && (!siteId || !topic.trim())) ||
+              (imageSource === "url" && !customImageUrl.trim())
             }
             className="bg-indigo-500 hover:bg-indigo-600"
           >

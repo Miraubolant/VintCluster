@@ -4,7 +4,7 @@
 
 - Coolify v4+ installé sur un serveur
 - Accès à un projet Supabase (base de données configurée)
-- Clés API: OpenAI, Unsplash
+- Clés API: OpenAI, Replicate
 - Domaines configurés (DNS pointant vers le serveur Coolify)
 
 ## Étape 1: Créer l'application
@@ -43,7 +43,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # APIs externes
 OPENAI_API_KEY=sk-proj-...
-UNSPLASH_ACCESS_KEY=...
+REPLICATE_API_TOKEN=r8_...
 
 # Configuration application
 NEXT_PUBLIC_ADMIN_DOMAIN=admin.votredomaine.com

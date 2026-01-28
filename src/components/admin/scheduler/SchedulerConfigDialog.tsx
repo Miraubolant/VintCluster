@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { upsertSchedulerConfig } from "@/lib/actions/scheduler";
 import { toast } from "sonner";
+import { ImageIcon } from "lucide-react";
 import type { Site, SchedulerConfig } from "@/types/database";
 
 interface SchedulerConfigWithSite extends SchedulerConfig {
@@ -242,6 +243,19 @@ export function SchedulerConfigDialog({
                   {hour}h
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Info sur la génération d'images */}
+          <div className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="p-1.5 bg-purple-100 rounded">
+              <ImageIcon className="h-4 w-4 text-purple-600" />
+            </div>
+            <div className="text-sm">
+              <p className="font-medium text-purple-900">Images générées automatiquement</p>
+              <p className="text-purple-700 mt-0.5">
+                Chaque article généré automatiquement inclura une image créée par IA avec le modèle <span className="font-medium">FLUX Schnell</span> (~3s).
+              </p>
             </div>
           </div>
 
