@@ -1,6 +1,15 @@
 import { MetadataRoute } from "next";
+import { headers } from "next/headers";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const headersList = await headers();
+  const host = headersList.get("x-current-host") || headersList.get("host") || "";
+  const domain = host.split(":")[0];
+
+  // Use HTTPS for production, HTTP for localhost
+  const protocol = domain === "localhost" || domain === "127.0.0.1" ? "http" : "https";
+  const baseUrl = `${protocol}://${domain}`;
+
   return {
     rules: [
       {
@@ -9,6 +18,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin/", "/api/"],
       },
     ],
-    sitemap: "https://example.com/sitemap.xml",
+    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }

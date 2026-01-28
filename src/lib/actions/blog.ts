@@ -14,6 +14,7 @@ export interface PublicArticle {
   image_alt: string | null;
   faq: FAQItem[];
   published_at: string;
+  updated_at: string | null;
   site: {
     name: string;
     domain: string;
@@ -91,6 +92,7 @@ export const getPublishedArticles = unstable_cache(
       image_alt: article.image_alt,
       faq: (article.faq as unknown as FAQItem[]) || [],
       published_at: article.published_at || article.created_at || "",
+      updated_at: article.updated_at || null,
       site: article.site as PublicArticle["site"],
     }));
   },
@@ -125,6 +127,7 @@ export const getArticleBySlug = unstable_cache(
       image_alt: data.image_alt,
       faq: (data.faq as unknown as FAQItem[]) || [],
       published_at: data.published_at || data.created_at || "",
+      updated_at: data.updated_at || null,
       site: data.site as PublicArticle["site"],
     };
   },

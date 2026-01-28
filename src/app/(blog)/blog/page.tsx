@@ -21,15 +21,42 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const site = await getSiteByDomain(domain);
 
+  // Determine base URL
+  const isLocalhost = domain === "localhost" || domain === "127.0.0.1";
+  const protocol = isLocalhost ? "http" : "https";
+  const baseUrl = `${protocol}://${host}`;
+
   if (!site) {
     return {
       title: "Blog | VintCluster",
     };
   }
 
+  const title = `Blog | ${site.name}`;
+  const description = site.meta_description || `Tous les articles de ${site.name}`;
+
   return {
-    title: `Blog | ${site.name}`,
-    description: `Tous les articles de ${site.name}`,
+    metadataBase: new URL(baseUrl),
+    title,
+    description,
+    alternates: {
+      canonical: "/blog",
+    },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      siteName: site.name,
+      url: `${baseUrl}/blog`,
+      locale: "fr_FR",
+      images: site.logo_url ? [{ url: site.logo_url, alt: site.name }] : undefined,
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+      images: site.logo_url ? [site.logo_url] : undefined,
+    },
   };
 }
 

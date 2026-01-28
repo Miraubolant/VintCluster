@@ -15,6 +15,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const site = await getSiteByDomain(domain);
 
+  // Determine base URL
+  const isLocalhost = domain === "localhost" || domain === "127.0.0.1";
+  const protocol = isLocalhost ? "http" : "https";
+  const baseUrl = `${protocol}://${host}`;
+
   if (!site) {
     return {
       title: "VintCluster Blog",
@@ -23,12 +28,26 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   return {
-    title: site.name,
+    metadataBase: new URL(baseUrl),
+    title: site.meta_title || site.name,
     description: site.meta_description || `Blog ${site.name}`,
+    alternates: {
+      canonical: "/",
+    },
     openGraph: {
-      title: site.name,
+      title: site.meta_title || site.name,
       description: site.meta_description || `Blog ${site.name}`,
       type: "website",
+      siteName: site.name,
+      url: baseUrl,
+      locale: "fr_FR",
+      images: site.logo_url ? [{ url: site.logo_url, alt: site.name }] : undefined,
+    },
+    twitter: {
+      card: "summary",
+      title: site.meta_title || site.name,
+      description: site.meta_description || `Blog ${site.name}`,
+      images: site.logo_url ? [site.logo_url] : undefined,
     },
   };
 }

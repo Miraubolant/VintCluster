@@ -35,15 +35,30 @@ export async function generateMetadata({
     return { title: "Article non trouvé" };
   }
 
+  // Determine base URL
+  const isLocalhost = domain === "localhost" || domain === "127.0.0.1";
+  const protocol = isLocalhost ? "http" : "https";
+  const baseUrl = `${protocol}://${host}`;
+
   return {
+    metadataBase: new URL(baseUrl),
     title: `${article.title} | ${site.name}`,
     description: article.summary || article.title,
+    alternates: {
+      canonical: `/blog/${slug}`,
+    },
     openGraph: {
       title: article.title,
       description: article.summary || article.title,
       type: "article",
+      siteName: site.name,
+      url: `${baseUrl}/blog/${slug}`,
+      locale: "fr_FR",
       publishedTime: article.published_at,
-      images: article.image_url ? [article.image_url] : undefined,
+      modifiedTime: article.updated_at || undefined,
+      images: article.image_url
+        ? [{ url: article.image_url, alt: article.image_alt || article.title }]
+        : undefined,
     },
     twitter: {
       card: "summary_large_image",
@@ -204,6 +219,37 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         )}
       </div>
 
+      {/* JSON-LD Structured Data - BreadcrumbList */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Accueil",
+                item: `https://${domain}`,
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "Blog",
+                item: `https://${domain}/blog`,
+              },
+              {
+                "@type": "ListItem",
+                position: 3,
+                name: article.title,
+                item: `https://${domain}/blog/${slug}`,
+              },
+            ],
+          }),
+        }}
+      />
+
       {/* JSON-LD Structured Data - Article */}
       <script
         type="application/ld+json"
@@ -215,13 +261,20 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             description: article.summary || "",
             image: article.image_url || undefined,
             datePublished: article.published_at,
+            dateModified: article.updated_at || article.published_at,
             author: {
               "@type": "Organization",
               name: site.name,
+              url: `https://${domain}`,
             },
             publisher: {
               "@type": "Organization",
               name: site.name,
+              url: `https://${domain}`,
+              logo: site.logo_url ? {
+                "@type": "ImageObject",
+                url: site.logo_url,
+              } : undefined,
             },
             mainEntityOfPage: {
               "@type": "WebPage",
