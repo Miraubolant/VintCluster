@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import type { Site } from "@/types/database";
+import { getOpenAIClient } from "@/lib/openai/client";
 
 // Schema de validation
 const siteSchema = z.object({
@@ -87,6 +88,21 @@ export async function updateSite(id: string, formData: SiteFormData): Promise<{ 
 
   revalidatePath("/admin/sites");
   revalidatePath(`/admin/sites/${id}`);
+
+  // Revalidate public site cache (async, don't wait)
+  if (result.data.domain) {
+    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL ? "" : "http://localhost:3000"}/api/revalidate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: process.env.REVALIDATION_SECRET,
+        domain: result.data.domain,
+      }),
+    }).catch(() => {
+      // Silent fail - cache will expire naturally
+    });
+  }
+
   return { data: data as Site };
 }
 
@@ -171,4 +187,74 @@ export async function getSitesWithStats(): Promise<{ data: SiteWithStats[]; erro
   );
 
   return { data: sitesWithStats };
+}
+
+// Generate SEO metadata using AI
+export async function generateSiteSEO(
+  siteName: string,
+  siteId?: string
+): Promise<{ meta_title: string; meta_description: string } | { error: string }> {
+  try {
+    const openai = getOpenAIClient();
+
+    // If siteId provided, get associated keywords for better context
+    let keywords: string[] = [];
+    if (siteId) {
+      const supabase = await createClient();
+      const { data } = await supabase
+        .from("keywords")
+        .select("keyword")
+        .eq("site_id", siteId)
+        .limit(10);
+
+      if (data) {
+        keywords = data.map((k) => k.keyword);
+      }
+    }
+
+    const keywordsContext = keywords.length > 0
+      ? `\n\nMots-clés associés au site: ${keywords.join(", ")}`
+      : "";
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `Tu es un expert SEO. Génère un titre SEO et une méta-description pour un site web.
+
+Règles:
+- Titre SEO: 50-60 caractères max, accrocheur, avec le nom du site
+- Description: 150-160 caractères max, incitative, avec appel à l'action
+- Ton professionnel mais engageant
+- Intègre les mots-clés naturellement si fournis
+
+Réponds UNIQUEMENT en JSON valide avec ce format:
+{"meta_title": "...", "meta_description": "..."}`
+        },
+        {
+          role: "user",
+          content: `Nom du site: ${siteName}${keywordsContext}`
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 200,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      return { error: "Pas de réponse de l'IA" };
+    }
+
+    // Parse JSON response
+    const result = JSON.parse(content);
+
+    return {
+      meta_title: result.meta_title || "",
+      meta_description: result.meta_description || "",
+    };
+  } catch (error) {
+    console.error("Error generating SEO:", error);
+    return { error: "Erreur lors de la génération SEO" };
+  }
 }

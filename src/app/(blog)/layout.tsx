@@ -29,6 +29,7 @@ export default async function BlogLayout({
   const siteName = site?.name || "VintCluster Blog";
   const primaryColor = site?.primary_color || "#FFE500";
   const secondaryColor = site?.secondary_color || "#000000";
+  const logoUrl = site?.logo_url || null;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -48,6 +49,7 @@ export default async function BlogLayout({
         siteName={siteName}
         primaryColor={primaryColor}
         secondaryColor={secondaryColor}
+        logoUrl={logoUrl}
       />
       <main className="flex-1 relative z-10">{children}</main>
       <BlogFooter
