@@ -224,7 +224,7 @@ src/
 │   │   ├── sites/           # SitesTable, CreateSiteDialog, etc.
 │   │   ├── keywords/        # KeywordsTable, ImportKeywordsDialog, etc.
 │   │   ├── articles/        # ArticlesTable, ArticlePreviewDialog, etc.
-│   │   ├── scheduler/       # SchedulerConfigCard, SchedulerConfigDialog
+│   │   ├── scheduler/       # SchedulerConfigCard, SchedulerConfigDialog (affiche FLUX Schnell auto)
 │   │   ├── logs/            # LogsTable, LogsFilters
 │   │   └── layout/          # Sidebar, Header
 │   └── blog/                # Composants blog public
@@ -334,7 +334,7 @@ REVALIDATION_SECRET=xxx  # Pour /api/revalidate
 
 ### Cron Jobs (sécurisés par Bearer token)
 ```bash
-# Génération automatique
+# Génération automatique (articles + images IA FLUX Schnell)
 GET /api/cron/generate
 Authorization: Bearer $CRON_SECRET
 
@@ -342,6 +342,8 @@ Authorization: Bearer $CRON_SECRET
 GET /api/cron/publish
 Authorization: Bearer $CRON_SECRET
 ```
+
+**Note** : Le cron `/api/cron/generate` génère automatiquement une image IA avec **FLUX Schnell** (~3s) pour chaque article. Si la génération d'image échoue, l'article est créé sans image.
 
 ### Revalidation ISR
 ```bash
@@ -401,7 +403,9 @@ docker-compose up -d
 
 3. Générer Articles (admin/keywords ou cron)
    └─► OpenAI GPT-4o génère titre, contenu, summary, FAQ
-   └─► Replicate génère image (FLUX/SDXL) ou URL personnalisée
+   └─► Replicate génère image (FLUX Schnell par défaut, ou FLUX Dev, SDXL)
+   └─► Manuel: choix IA / URL personnalisée / pas d'image
+   └─► Cron: toujours FLUX Schnell automatique (~3s)
    └─► Status keyword: generating → generated
    └─► Article créé en draft
 
@@ -469,6 +473,7 @@ Après ajout d'un nouveau site, si 404 persiste :
 | JSON-LD FAQPage | ✅ | `src/app/(blog)/blog/[slug]/page.tsx` |
 | JSON-LD BreadcrumbList | ✅ | `src/app/(blog)/blog/[slug]/page.tsx` |
 | meta_title/description site | ✅ | Via admin + génération IA |
+| Favicon personnalisé | ✅ | Via admin (favicon_url par site) |
 
 ### Génération SEO IA
 
@@ -502,6 +507,7 @@ generateSiteSEO(siteName: string, siteId?: string)
 - **Debug** : Endpoints `/api/debug-*` pour diagnostiquer les problèmes (domain, article, page, render)
 - **Bulk Actions** : La page articles supporte la sélection multiple et les actions en masse
 - **Error Boundaries** : `error.tsx` dans les routes pour capturer et afficher les erreurs de rendu
+- **Scheduler UI** : L'interface affiche "Images IA: FLUX Schnell" pour informer que les images sont auto-générées
 
 ## Audit & Issues Connues
 
