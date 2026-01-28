@@ -27,6 +27,7 @@ Les articles générés doivent promouvoir ces 3 produits SaaS avec des **CTA cl
 
 - **Framework**: Next.js 16 (App Router + Turbopack)
 - **Base de données**: Supabase PostgreSQL
+- **Stockage images**: Supabase Storage (bucket `images`)
 - **Authentification**: Supabase Auth (single user admin)
 - **Génération IA**: OpenAI GPT-4o API
 - **Images**: Replicate API (FLUX, SDXL - génération IA)
@@ -198,6 +199,7 @@ CREATE TABLE scheduler_config (
   publish_hours INTEGER[] DEFAULT '{10}', -- Heures de génération
   max_per_day INTEGER DEFAULT 5,
   max_per_week INTEGER DEFAULT 20,
+  keyword_ids UUID[] DEFAULT '{}', -- Mots-clés sélectionnés pour ce scheduler
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -224,7 +226,7 @@ src/
 │   │   ├── sites/           # SitesTable, CreateSiteDialog, etc.
 │   │   ├── keywords/        # KeywordsTable, ImportKeywordsDialog, etc.
 │   │   ├── articles/        # ArticlesTable, ArticlePreviewDialog, etc.
-│   │   ├── scheduler/       # SchedulerConfigCard, SchedulerConfigDialog (affiche FLUX Schnell auto)
+│   │   ├── scheduler/       # SchedulerConfigCard, SchedulerConfigDialog, BulkProgressBar
 │   │   ├── logs/            # LogsTable, LogsFilters
 │   │   └── layout/          # Sidebar, Header
 │   └── blog/                # Composants blog public
@@ -243,6 +245,7 @@ src/
 │   ├── supabase/            # Client Supabase
 │   │   ├── client.ts        # Client browser
 │   │   ├── server.ts        # Client server
+│   │   ├── storage.ts       # Upload images vers Supabase Storage
 │   │   └── middleware.ts    # Session management
 │   ├── openai/              # Génération IA
 │   │   ├── client.ts
@@ -301,12 +304,28 @@ interface ImageOptions {
 - `bulkUpdateArticleStatus(ids, status)` - Mise à jour en masse du statut
 - `bulkDeleteArticles(ids)` - Suppression en masse
 
+### Scheduler (`lib/actions/scheduler.ts`)
+- `getSchedulerConfigs()` - Liste toutes les configurations scheduler
+- `getSchedulerConfigBySiteId(siteId)` - Config d'un site
+- `upsertSchedulerConfig(siteId, config)` - Crée/met à jour une config
+- `toggleSchedulerEnabled(siteId, enabled)` - Active/désactive
+- `getAvailableKeywordsForScheduler(siteId?)` - Keywords pending disponibles
+- `getSchedulerStats()` - Statistiques dashboard
+- `runSchedulerManually(siteId)` - Lancer une génération manuelle
+- `prepareBulkGeneration(siteIds, totalArticles)` - Prépare les tâches de génération en masse
+- `generateSingleBulkArticle(siteId, keywordIds, autoPublish)` - Génère un article (pour progression)
+- `finalizeBulkGeneration()` - Revalide les caches après génération en masse
+
 ### Blog Public (`lib/actions/blog.ts`)
 - `getSiteByDomain(domain)` - Site par domaine (cached 60s, gère www automatiquement)
 - `getPublishedArticles(siteId, limit, offset)` - Articles publiés (cached 60s)
 - `getArticleBySlug(siteId, slug)` - Article par slug (cached 60s)
 - `getPublishedArticlesCount(siteId)` - Compte articles
 - `getAllArticleSlugs(siteId)` - Pour generateStaticParams
+
+### Storage (`lib/supabase/storage.ts`)
+- `uploadImageFromUrl(imageUrl, siteId, filename?)` - Télécharge et stocke une image
+- `deleteImageFromStorage(imageUrl)` - Supprime une image du storage
 
 ## Variables d'Environnement
 
@@ -508,6 +527,10 @@ generateSiteSEO(siteName: string, siteId?: string)
 - **Bulk Actions** : La page articles supporte la sélection multiple et les actions en masse
 - **Error Boundaries** : `error.tsx` dans les routes pour capturer et afficher les erreurs de rendu
 - **Scheduler UI** : L'interface affiche "Images IA: FLUX Schnell" pour informer que les images sont auto-générées
+- **Bulk Generation** : Le scheduler permet de sélectionner plusieurs configs et lancer une génération en masse avec répartition automatique des articles
+- **Progress Bar** : Barre de progression en bas à droite affichant le statut en temps réel lors de la génération en masse
+- **Image Storage** : Les images générées par Replicate sont persistées dans Supabase Storage (bucket `images`) pour éviter l'expiration des URLs temporaires
+- **Admin Favicon** : Emoji ⚙️ en SVG data URL pour le favicon admin
 
 ## Audit & Issues Connues
 
@@ -528,6 +551,20 @@ generateSiteSEO(siteName: string, siteId?: string)
 
 1. **Types dupliqués** - `ArticleWithKeyword`, `ArticleWithDetails`, `KeywordWithSite` à consolider
 2. **Produits hardcodés** - URLs des produits Vint* à externaliser en config
+
+## Configuration Supabase Storage
+
+Pour que les images générées soient persistées, créer un bucket public dans Supabase :
+
+```sql
+-- Dans Supabase SQL Editor
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('images', 'images', true);
+
+-- Ou via le dashboard : Storage → Create bucket → "images" (public)
+```
+
+Les images sont stockées dans `images/{siteId}/{timestamp}-{random}.webp` avec un cache d'1 an.
 
 ## Migration SQL
 
@@ -551,6 +588,9 @@ ALTER TABLE keywords ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now
 
 -- 3. Supprimer l'ancienne contrainte unique
 ALTER TABLE keywords DROP CONSTRAINT IF EXISTS keywords_site_id_keyword_key;
+
+-- 3b. Ajouter keyword_ids au scheduler_config
+ALTER TABLE scheduler_config ADD COLUMN IF NOT EXISTS keyword_ids UUID[] DEFAULT '{}';
 
 -- 4. Créer un index pour les recherches
 CREATE INDEX IF NOT EXISTS idx_keywords_site_id ON keywords(site_id);

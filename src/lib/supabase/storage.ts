@@ -1,6 +1,18 @@
-import { createAdminClient } from "./server";
+import { createClient } from "@supabase/supabase-js";
 
 const BUCKET_NAME = "images";
+
+// Client admin standalone pour le storage (évite l'import de server.ts qui utilise next/headers)
+function getStorageClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Missing Supabase environment variables for storage");
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 /**
  * Télécharge une image depuis une URL externe et la stocke dans Supabase Storage
@@ -43,7 +55,7 @@ export async function uploadImageFromUrl(
     const filePath = `${siteId}/${finalFilename}`;
 
     // Upload vers Supabase Storage avec le client admin
-    const supabase = createAdminClient();
+    const supabase = getStorageClient();
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
@@ -76,7 +88,7 @@ export async function uploadImageFromUrl(
 export async function deleteImageFromStorage(imageUrl: string): Promise<boolean> {
   try {
     // Extraire le chemin du fichier depuis l'URL
-    const supabase = createAdminClient();
+    const supabase = getStorageClient();
     const bucketUrl = supabase.storage.from(BUCKET_NAME).getPublicUrl("").data.publicUrl;
 
     if (!imageUrl.startsWith(bucketUrl)) {
