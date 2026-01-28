@@ -32,7 +32,7 @@ export const IMPROVEMENT_MODELS: Record<ImprovementModel, { name: string; descri
 const IMPROVEMENT_SYSTEM_PROMPT = `Tu es un expert en rédaction SEO et optimisation de contenu pour l'IA. Tu améliores des articles de blog existants sur la vente sur Vinted et les outils IA pour vendeurs.
 
 ## OBJECTIF
-Transformer un article existant en un contenu premium de 2000-2500 mots, optimisé pour :
+Transformer un article existant en un contenu premium de 1500-2000 mots, optimisé pour :
 - Le référencement Google (SEO traditionnel)
 - L'affichage en featured snippets
 - Les réponses IA (ChatGPT, Perplexity, Google SGE)
@@ -53,22 +53,21 @@ Transformer un article existant en un contenu premium de 2000-2500 mots, optimis
 ## VOCABULAIRE VINTED À UTILISER
 Intègre naturellement ces termes : vendeur, acheteur, vestiaire, boost, mise en avant, algorithme Vinted, photos, annonces, descriptions, négociation, livraison Mondial Relay, Vinted Pro, évaluation, followers, favoris, offres, bundle, lot
 
-## STRUCTURE OBLIGATOIRE (2000-2500 mots)
+## STRUCTURE OBLIGATOIRE (1500-2000 mots)
 
-### 1. Introduction (150-200 mots)
+### 1. Introduction (100-150 mots)
 - Commence par une RÉPONSE DIRECTE à la question principale (format featured snippet)
 - Accroche personnelle qui connecte avec le lecteur
-- Annonce du contenu à venir
 - N'utilise PAS de H2 dans l'intro
 
-### 2. Corps de l'article (1500-1800 mots)
-- 4-6 sections avec titres H2 clairs et descriptifs
-- Sous-sections H3 quand pertinent (2-3 par H2 max)
+### 2. Corps de l'article (1200-1600 mots)
+- 4-5 sections avec titres H2 clairs et descriptifs
+- Sous-sections H3 quand pertinent (1-2 par H2 max)
 - Listes à puces pour les conseils pratiques
 - Paragraphes courts (3-4 phrases max)
 - Données chiffrées avec sources crédibles
 
-### 3. Conclusion (100-150 mots)
+### 3. Conclusion (80-120 mots)
 - Résumé des points clés
 - Call-to-action final encourageant
 
@@ -94,7 +93,7 @@ Chiffres cohérents : +30% à +50% ventes, 2x à 3x plus de vues, 50% temps gagn
 - Textes variés : "Essayer gratuitement", "Tester maintenant", "Découvrir", "Commencer"
 - Espacement : un CTA dans le premier tiers, un au milieu, un vers la fin
 
-## FAQ ENRICHIE (5-8 questions)
+## FAQ ENRICHIE (5-6 questions)
 - Questions que les gens tapent vraiment sur Google
 - Commencer par des verbes d'action : "Comment", "Pourquoi", "Combien", "Est-ce que", "Quel est"
 - Réponses de 50-80 mots, directes et complètes
@@ -142,11 +141,11 @@ ${existingFaqFormatted}
 
 ## INSTRUCTIONS D'AMÉLIORATION
 
-1. GARDE le sujet principal mais enrichis considérablement le contenu
-2. AUGMENTE la longueur à 2000-2500 mots minimum
+1. GARDE le sujet principal mais enrichis le contenu
+2. AUGMENTE la longueur à 1500-2000 mots
 3. AMÉLIORE le titre pour plus d'impact SEO (garde l'intention, améliore la formulation)
-4. RESTRUCTURE avec 4-6 sections H2 bien définies
-5. ENRICHIS la FAQ avec 5-8 questions pertinentes (garde les meilleures existantes)
+4. RESTRUCTURE avec 4-5 sections H2 bien définies
+5. ENRICHIS la FAQ avec 5-6 questions pertinentes (garde les meilleures existantes)
 6. AJOUTE 2-3 CTA vers VintDress/VintBoost/VintPower selon le contexte
 7. INTÈGRE des données chiffrées crédibles
 8. OPTIMISE pour les featured snippets et l'AI search
@@ -172,7 +171,7 @@ Retourne UNIQUEMENT un JSON valide avec cette structure exacte (sans aucun texte
       { role: "user", content: userPrompt },
     ],
     temperature: 0.7,
-    max_tokens: 8000, // Increased for longer content
+    max_tokens: 4096,
     response_format: { type: "json_object" },
   });
 
@@ -194,8 +193,8 @@ Retourne UNIQUEMENT un JSON valide avec cette structure exacte (sans aucun texte
     throw new Error("Titre invalide ou trop court");
   }
 
-  if (!parsed.content || parsed.content.length < 3000) {
-    throw new Error("Contenu trop court (minimum 2000 mots attendus)");
+  if (!parsed.content || parsed.content.length < 2000) {
+    throw new Error("Contenu trop court (minimum 1500 mots attendus)");
   }
 
   if (!parsed.faq || parsed.faq.length < 5) {

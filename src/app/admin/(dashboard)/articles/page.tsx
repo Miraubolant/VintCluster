@@ -658,7 +658,7 @@ export default function ArticlesPage() {
           <DialogHeader>
             <DialogTitle>Améliorer avec l'IA</DialogTitle>
             <DialogDescription>
-              Améliorer {selectedIds.length} article(s) avec l'IA. Le titre, le contenu et la FAQ seront enrichis (2000-2500 mots).
+              Améliorer {selectedIds.length} article(s) avec l'IA. Le titre, le contenu et la FAQ seront enrichis (1500-2000 mots).
               Le statut actuel sera conservé.
             </DialogDescription>
           </DialogHeader>
