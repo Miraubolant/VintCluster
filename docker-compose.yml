@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - NEXT_PUBLIC_ADMIN_DOMAIN=${NEXT_PUBLIC_ADMIN_DOMAIN}
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - UNSPLASH_ACCESS_KEY=${UNSPLASH_ACCESS_KEY}
+      - CRON_SECRET=${CRON_SECRET}
+      - REVALIDATION_SECRET=${REVALIDATION_SECRET}
+      - NEXT_PUBLIC_ADMIN_DOMAIN=${NEXT_PUBLIC_ADMIN_DOMAIN}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optionnel: Cron jobs avec ofelia
+  scheduler:
+    image: mcuadros/ofelia:latest
+    depends_on:
+      - app
+    command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      ofelia.job-run.generate.schedule: "0 */2 * * *"
+      ofelia.job-run.generate.command: "wget -qO- --header='Authorization: Bearer ${CRON_SECRET}' http://app:3000/api/cron/generate"
+      ofelia.job-run.publish.schedule: "0 8 * * *"
+      ofelia.job-run.publish.command: "wget -qO- --header='Authorization: Bearer ${CRON_SECRET}' http://app:3000/api/cron/publish"
