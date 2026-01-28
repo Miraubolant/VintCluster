@@ -57,8 +57,8 @@ export async function generateImage(
     const replicate = getReplicateClient();
     const modelId = MODELS[model];
 
-    // Améliorer le prompt pour de meilleures images de blog
-    const enhancedPrompt = `Professional blog header image: ${prompt}. High quality, modern, clean design, suitable for web article header, 16:9 aspect ratio, vibrant colors, professional photography style`;
+    // Améliorer le prompt pour de meilleures images de blog (sans texte)
+    const enhancedPrompt = `Professional blog header image: ${prompt}. High quality, modern, clean design, suitable for web article header, 16:9 aspect ratio, vibrant colors, professional photography style. NO TEXT, NO WORDS, NO LETTERS, NO WRITING, NO TYPOGRAPHY in the image`;
 
     let output: unknown;
 
