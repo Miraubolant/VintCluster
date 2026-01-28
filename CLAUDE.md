@@ -76,13 +76,22 @@ Le dashboard admin utilise un style **moderne et épuré** :
 
 ### Multi-Tenant par Domaine
 
-Une seule application Next.js sert tous les sites. Le domaine est détecté via le middleware :
+Une seule application Next.js sert tous les sites. Le domaine est détecté via le proxy (anciennement middleware) :
 
 ```typescript
-// middleware.ts
-const host = request.headers.get('host');
-// Header x-current-host injecté pour les server components
-supabaseResponse.headers.set("x-current-host", host);
+// proxy.ts (Next.js 16 - remplace middleware.ts)
+export async function proxy(request: NextRequest) {
+  const host = request.headers.get('host');
+  // Header x-current-host injecté pour les server components
+  supabaseResponse.headers.set("x-current-host", host);
+  return supabaseResponse;
+}
+```
+
+**Important** : Les pages qui utilisent `headers()` pour la détection multi-tenant doivent avoir :
+```typescript
+// Force dynamic rendering car headers() est une fonction dynamique
+export const dynamic = "force-dynamic";
 ```
 
 ### Structure des Routes
@@ -98,7 +107,8 @@ src/app/
 │   └── blog/
 │       ├── page.tsx         # Liste paginée des articles
 │       └── [slug]/
-│           └── page.tsx     # Détail article + FAQ + JSON-LD
+│           ├── page.tsx     # Détail article + FAQ + JSON-LD (dynamic)
+│           └── error.tsx    # Error boundary pour les erreurs de rendu
 ├── admin/                   # Routes admin (protégées)
 │   ├── layout.tsx           # Layout admin avec sidebar
 │   ├── page.tsx             # Dashboard stats
@@ -116,6 +126,10 @@ src/app/
     ├── cron/
     │   ├── generate/        # Génération automatique
     │   └── publish/         # Publication automatique
+    ├── debug-article/       # Debug données article
+    ├── debug-domain/        # Debug détection domaine
+    ├── debug-page/          # Debug rendu page étape par étape
+    ├── debug-render/        # Debug contenu et FAQ
     ├── health/              # Health check Docker
     ├── revalidate/          # Revalidation ISR
     └── setup-db/            # Initialisation DB
@@ -327,11 +341,19 @@ GET /api/health
 # Response: {"status": "healthy", "timestamp": "..."}
 ```
 
-### Debug Domain (temporaire)
+### Debug Endpoints
 ```bash
+# Debug domaine - Affiche headers et domaine détecté
 GET /api/debug-domain
-# Affiche les headers, le domaine détecté et les sites en DB
-# Utile pour diagnostiquer les problèmes de multi-tenant
+
+# Debug article - Vérifie les données article en DB
+GET /api/debug-article?slug=mon-article
+
+# Debug page - Diagnostic étape par étape du rendu
+GET /api/debug-page?slug=mon-article&domain=monsite.com
+
+# Debug render - Analyse contenu et FAQ
+GET /api/debug-render?slug=mon-article
 ```
 
 ## Commandes
@@ -419,14 +441,17 @@ Après ajout d'un nouveau site, si 404 persiste :
 ## Notes Importantes
 
 - **Next.js 16** : Utilise Turbopack, `unstable_cache` pour le caching
-- **Multi-tenant** : Détection domaine via header `x-current-host` injecté par middleware
+- **Proxy (ex-Middleware)** : `middleware.ts` renommé en `proxy.ts` avec fonction `proxy()` (convention Next.js 16)
+- **Multi-tenant** : Détection domaine via header `x-current-host` injecté par proxy.ts
+- **Dynamic Rendering** : Pages utilisant `headers()` doivent avoir `export const dynamic = "force-dynamic"` pour éviter l'erreur `DYNAMIC_SERVER_USAGE`
 - **ISR** : Cache 60s pour articles et sites, revalidation on-demand via tag "sites" ou "articles"
 - **Sécurité** : Routes admin protégées, CRON_SECRET pour les endpoints cron
 - **Types** : Casting `as unknown as Type` nécessaire pour les champs JSONB (faq, metadata)
 - **Keywords globaux** : Les mots-clés avec `site_id = NULL` peuvent être utilisés pour générer des articles sur n'importe quel site
 - **Gestion www** : Le domaine est normalisé (www supprimé) pour correspondance avec la DB
-- **Debug** : Endpoint `/api/debug-domain` pour diagnostiquer les problèmes de domaine
+- **Debug** : Endpoints `/api/debug-*` pour diagnostiquer les problèmes (domain, article, page, render)
 - **Bulk Actions** : La page articles supporte la sélection multiple et les actions en masse
+- **Error Boundaries** : `error.tsx` dans les routes pour capturer et afficher les erreurs de rendu
 
 ## Migration SQL
 
