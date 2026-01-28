@@ -4,7 +4,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 // Domaine admin (configurable via env)
 const ADMIN_DOMAIN = process.env.NEXT_PUBLIC_ADMIN_DOMAIN || "localhost:3000";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") || "";
   const pathname = request.nextUrl.pathname;
 
