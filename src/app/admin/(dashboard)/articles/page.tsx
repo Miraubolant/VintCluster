@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   RefreshCw,
   Search,
   Plus,
@@ -22,6 +30,8 @@ import {
   FileCheck,
   Eye,
   XCircle,
+  ImageIcon,
+  Loader2,
 } from "lucide-react";
 import {
   ArticlesStats,
@@ -37,8 +47,11 @@ import {
   deleteArticle,
   bulkUpdateArticleStatus,
   bulkDeleteArticles,
+  generateArticleImage,
 } from "@/lib/actions/articles";
 import { getSites } from "@/lib/actions/sites";
+import { useBulkProgress } from "@/contexts/BulkProgressContext";
+import { MODEL_INFO, type ImageModel } from "@/lib/replicate";
 import { toast } from "sonner";
 import type { Site, Article, ArticleStatus } from "@/types/database";
 
@@ -80,6 +93,19 @@ export default function ArticlesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [previewArticle, setPreviewArticle] = useState<ArticleWithKeyword | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Regenerate images dialog
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<ImageModel>("flux-schnell");
+
+  // Progress tracking
+  const { progress, setProgress, isCancelled } = useBulkProgress();
+  const cancelledRef = useRef(false);
+
+  // Sync cancelled state with ref
+  useEffect(() => {
+    cancelledRef.current = isCancelled;
+  }, [isCancelled]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -159,6 +185,89 @@ export default function ArticlesPage() {
     }
 
     toast.success(`${result.count} article(s) supprimé(s)`);
+    setSelectedIds([]);
+    loadData();
+  }
+
+  async function handleBulkRegenerateImages() {
+    if (selectedIds.length === 0) return;
+
+    setRegenerateDialogOpen(false);
+    cancelledRef.current = false;
+
+    // Get article titles for progress display
+    const selectedArticles = articles.filter(a => selectedIds.includes(a.id));
+
+    // Initialize progress
+    setProgress({
+      isRunning: true,
+      total: selectedIds.length,
+      completed: 0,
+      currentSite: null,
+      errors: [],
+      results: [],
+    });
+
+    // Generate images one by one
+    for (let i = 0; i < selectedArticles.length; i++) {
+      const article = selectedArticles[i];
+
+      // Check if cancelled
+      if (cancelledRef.current) {
+        setProgress(prev => ({
+          ...prev,
+          errors: [...prev.errors, "Annulé par l'utilisateur"],
+        }));
+        break;
+      }
+
+      // Update current status
+      setProgress(prev => ({
+        ...prev,
+        currentSite: `${article.title.substring(0, 40)}${article.title.length > 40 ? "..." : ""} (${i + 1}/${selectedIds.length})`,
+      }));
+
+      const result = await generateArticleImage(article.id, selectedModel);
+
+      // Check if cancelled after generation
+      if (cancelledRef.current) {
+        if (result.url) {
+          setProgress(prev => ({
+            ...prev,
+            completed: prev.completed + 1,
+            results: [...prev.results, { siteName: article.site?.name || "Article", title: article.title }],
+            errors: [...prev.errors, "Annulé par l'utilisateur"],
+          }));
+        } else {
+          setProgress(prev => ({
+            ...prev,
+            errors: [...prev.errors, "Annulé par l'utilisateur"],
+          }));
+        }
+        break;
+      }
+
+      if (result.url) {
+        setProgress(prev => ({
+          ...prev,
+          completed: prev.completed + 1,
+          results: [...prev.results, { siteName: article.site?.name || "Article", title: article.title }],
+        }));
+      } else if (result.error) {
+        setProgress(prev => ({
+          ...prev,
+          errors: [...prev.errors, `${article.title.substring(0, 30)}: ${result.error}`],
+        }));
+      }
+    }
+
+    // Finalize
+    cancelledRef.current = false;
+    setProgress(prev => ({
+      ...prev,
+      isRunning: false,
+      currentSite: null,
+    }));
     setSelectedIds([]);
     loadData();
   }
@@ -268,8 +377,19 @@ export default function ArticlesPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setRegenerateDialogOpen(true)}
+              disabled={bulkLoading || progress.isRunning}
+              className="text-purple-700 border-purple-300 hover:bg-purple-50"
+            >
+              <ImageIcon className="h-4 w-4 mr-1" />
+              Régénérer images
+            </Button>
+            <div className="w-px h-6 bg-gray-300 mx-1" />
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => handleBulkStatusChange("draft")}
-              disabled={bulkLoading}
+              disabled={bulkLoading || progress.isRunning}
               className="text-yellow-700 border-yellow-300 hover:bg-yellow-50"
             >
               <FileCheck className="h-4 w-4 mr-1" />
@@ -279,7 +399,7 @@ export default function ArticlesPage() {
               variant="outline"
               size="sm"
               onClick={() => handleBulkStatusChange("ready")}
-              disabled={bulkLoading}
+              disabled={bulkLoading || progress.isRunning}
               className="text-blue-700 border-blue-300 hover:bg-blue-50"
             >
               <CheckCircle className="h-4 w-4 mr-1" />
@@ -289,7 +409,7 @@ export default function ArticlesPage() {
               variant="outline"
               size="sm"
               onClick={() => handleBulkStatusChange("published")}
-              disabled={bulkLoading}
+              disabled={bulkLoading || progress.isRunning}
               className="text-green-700 border-green-300 hover:bg-green-50"
             >
               <Eye className="h-4 w-4 mr-1" />
@@ -299,7 +419,7 @@ export default function ArticlesPage() {
               variant="outline"
               size="sm"
               onClick={() => handleBulkStatusChange("unpublished")}
-              disabled={bulkLoading}
+              disabled={bulkLoading || progress.isRunning}
               className="text-gray-700 border-gray-300 hover:bg-gray-50"
             >
               <XCircle className="h-4 w-4 mr-1" />
@@ -310,7 +430,7 @@ export default function ArticlesPage() {
               variant="outline"
               size="sm"
               onClick={handleBulkDelete}
-              disabled={bulkLoading}
+              disabled={bulkLoading || progress.isRunning}
               className="text-red-700 border-red-300 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4 mr-1" />
@@ -335,6 +455,58 @@ export default function ArticlesPage() {
         open={!!previewArticle}
         onOpenChange={(open) => !open && setPreviewArticle(null)}
       />
+
+      {/* Dialog de régénération d'images */}
+      <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Régénérer les images</DialogTitle>
+            <DialogDescription>
+              Générer de nouvelles images pour {selectedIds.length} article(s) sélectionné(s).
+              Choisissez le modèle à utiliser.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Modèle de génération</label>
+              <Select value={selectedModel} onValueChange={(value) => setSelectedModel(value as ImageModel)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(MODEL_INFO) as ImageModel[]).map((model) => (
+                    <SelectItem key={model} value={model}>
+                      <div className="flex items-center justify-between gap-4">
+                        <span>{MODEL_INFO[model].name}</span>
+                        <span className="text-xs text-gray-500">{MODEL_INFO[model].speed}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                {MODEL_INFO[selectedModel].description}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRegenerateDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleBulkRegenerateImages}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <ImageIcon className="h-4 w-4 mr-2" />
+              Régénérer {selectedIds.length} image(s)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Progress bar is rendered by BulkProgressWrapper in the layout */}
     </div>
   );
 }
