@@ -298,7 +298,7 @@ Retourne UNIQUEMENT un JSON valide:
       { role: "user", content: userPrompt },
     ],
     temperature: 0.75,
-    max_tokens: 4096,
+    max_tokens: 8192, // Augmenté pour permettre 2500-3000 mots
     response_format: { type: "json_object" },
   });
 
@@ -320,8 +320,11 @@ Retourne UNIQUEMENT un JSON valide:
     throw new Error("Titre invalide ou trop court");
   }
 
-  if (!parsed.content || parsed.content.length < 3000) {
-    throw new Error("Contenu trop court (minimum 2500 mots attendus)");
+  // Compter les mots (pas les caractères)
+  const wordCount = parsed.content ? parsed.content.split(/\s+/).filter(w => w.length > 0).length : 0;
+
+  if (!parsed.content || wordCount < 1500) {
+    throw new Error(`Contenu trop court: ${wordCount} mots (minimum 1500 mots attendus)`);
   }
 
   // Use existing FAQ if new one is insufficient
