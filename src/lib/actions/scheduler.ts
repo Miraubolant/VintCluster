@@ -308,16 +308,27 @@ export async function runSchedulerManually(
   }
 
   // Récupérer un mot-clé pending parmi ceux sélectionnés
-  const { data: keyword, error: keywordError } = await supabase
-    .from("keywords")
-    .select("*")
-    .in("id", keywordIds)
-    .eq("status", "pending")
-    .order("priority", { ascending: false })
-    .limit(1)
-    .single();
+  // Approche par lots pour éviter les limites d'URL avec beaucoup d'IDs
+  let keyword = null;
+  const BATCH_SIZE = 50;
 
-  if (keywordError || !keyword) {
+  for (let i = 0; i < keywordIds.length && !keyword; i += BATCH_SIZE) {
+    const batch = keywordIds.slice(i, i + BATCH_SIZE);
+    const { data } = await supabase
+      .from("keywords")
+      .select("*")
+      .in("id", batch)
+      .eq("status", "pending")
+      .order("priority", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data) {
+      keyword = data;
+    }
+  }
+
+  if (!keyword) {
     return { success: false, error: "Aucun mot-clé disponible (tous déjà utilisés)" };
   }
 
@@ -517,21 +528,9 @@ export async function prepareBulkGenerationWithOptions(
   // Si des keywords personnalisés sont fournis, les utiliser pour TOUS les sites
   const useCustomKeywords = options.keywordIds && options.keywordIds.length > 0;
 
-  // Vérifier une seule fois si les keywords personnalisés sont valides (pending)
-  let validCustomKeywordIds: string[] = [];
-  if (useCustomKeywords) {
-    const { data: validKeywords } = await supabase
-      .from("keywords")
-      .select("id")
-      .in("id", options.keywordIds!)
-      .eq("status", "pending");
-
-    validCustomKeywordIds = validKeywords?.map(k => k.id) || [];
-
-    if (validCustomKeywordIds.length === 0) {
-      return { tasks: [], errors: ["Aucun des mots-clés sélectionnés n'est disponible (statut pending)"] };
-    }
-  }
+  // Les keywords personnalisés viennent du dialog qui les a déjà filtrés par statut "pending"
+  // On fait confiance à cette sélection pour éviter les limites d'URL avec beaucoup d'IDs
+  const validCustomKeywordIds: string[] = useCustomKeywords ? options.keywordIds! : [];
 
   for (let i = 0; i < siteIds.length; i++) {
     const siteId = siteIds[i];
@@ -552,8 +551,8 @@ export async function prepareBulkGenerationWithOptions(
     // Déterminer les keywords à utiliser
     let keywordIds: string[];
     if (useCustomKeywords) {
-      // Utiliser les keywords sélectionnés par l'utilisateur (déjà validés)
-      // Tous les sites partagent le même pool de keywords sélectionnés
+      // Utiliser les keywords sélectionnés par l'utilisateur
+      // Ils viennent du dialog qui les a déjà filtrés par statut "pending"
       keywordIds = validCustomKeywordIds;
     } else {
       // Utiliser les keywords de la config existante
@@ -563,24 +562,11 @@ export async function prepareBulkGenerationWithOptions(
         .eq("site_id", siteId)
         .single();
 
-      const configKeywordIds = (config?.keyword_ids as string[]) || [];
-
-      // Vérifier que les keywords de la config sont encore pending
-      if (configKeywordIds.length > 0) {
-        const { data: validConfigKeywords } = await supabase
-          .from("keywords")
-          .select("id")
-          .in("id", configKeywordIds)
-          .eq("status", "pending");
-
-        keywordIds = validConfigKeywords?.map(k => k.id) || [];
-      } else {
-        keywordIds = [];
-      }
+      keywordIds = (config?.keyword_ids as string[]) || [];
     }
 
     if (keywordIds.length === 0) {
-      errors.push(`${site.name}: Aucun mot-clé disponible (vérifiez les keywords pending)`);
+      errors.push(`${site.name}: Aucun mot-clé configuré`);
       continue;
     }
 
@@ -641,15 +627,26 @@ export async function generateSingleBulkArticle(
 }> {
   const supabase = await createClient();
 
-  // Récupérer un mot-clé pending
-  const { data: keyword } = await supabase
-    .from("keywords")
-    .select("*")
-    .in("id", keywordIds)
-    .eq("status", "pending")
-    .order("priority", { ascending: false })
-    .limit(1)
-    .single();
+  // Récupérer un mot-clé pending parmi ceux sélectionnés
+  // On utilise une approche par lots pour éviter les limites d'URL avec beaucoup d'IDs
+  let keyword = null;
+  const BATCH_SIZE = 50; // Limite sûre pour éviter les problèmes d'URL
+
+  for (let i = 0; i < keywordIds.length && !keyword; i += BATCH_SIZE) {
+    const batch = keywordIds.slice(i, i + BATCH_SIZE);
+    const { data } = await supabase
+      .from("keywords")
+      .select("*")
+      .in("id", batch)
+      .eq("status", "pending")
+      .order("priority", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data) {
+      keyword = data;
+    }
+  }
 
   if (!keyword) {
     return { success: false, error: "Plus de mots-clés disponibles" };
