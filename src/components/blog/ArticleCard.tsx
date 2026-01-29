@@ -46,7 +46,7 @@ export function ArticleCard({
   if (featured) {
     return (
       <Link href={`/blog/${article.slug}`} className="group block">
-        <article className={`relative overflow-hidden ${template === "brutal" ? "bg-white border-[6px] border-black" : template === "minimal" ? "bg-white" : template === "magazine" ? "bg-white border border-gray-200" : template === "tech" ? "bg-slate-900 border border-slate-700 rounded-2xl" : "bg-white rounded-3xl shadow-xl"}`}>
+        <article className={`relative overflow-hidden ${template === "brutal" ? "bg-white border-[6px] border-black" : template === "minimal" ? "bg-white" : template === "magazine" ? "bg-white border border-gray-200" : template === "tech" ? "bg-white border border-gray-200 rounded-2xl shadow-md" : "bg-white rounded-3xl shadow-xl"}`}>
           {/* Geometric corner decoration (brutal only) */}
           {template === "brutal" && (
             <>
@@ -74,7 +74,7 @@ export function ArticleCard({
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   {/* Gradient overlay */}
-                  <div className={`absolute inset-0 ${template === "tech" ? "bg-gradient-to-r from-slate-900/50 to-transparent" : "bg-gradient-to-t from-black/30 to-transparent md:bg-gradient-to-r"}`} />
+                  <div className={`absolute inset-0 ${template === "tech" ? "bg-gradient-to-r from-indigo-900/30 to-transparent" : "bg-gradient-to-t from-black/30 to-transparent md:bg-gradient-to-r"}`} />
                 </div>
                 {/* Diagonal separator for desktop (not in tech/fresh) */}
                 {template !== "tech" && template !== "fresh" && (
@@ -102,25 +102,25 @@ export function ArticleCard({
               {/* Date badge + reading time */}
               <div className="inline-flex items-center gap-2 mb-6 flex-wrap">
                 <div
-                  className={`px-4 py-2 font-bold text-sm uppercase tracking-wider ${template === "brutal" ? "border-[4px] border-black font-black" : template === "minimal" ? "text-gray-400 font-medium" : template === "magazine" ? "bg-gray-100 text-gray-700" : template === "tech" ? "bg-indigo-500/20 text-indigo-400 rounded-lg font-mono" : "bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-full"}`}
+                  className={`px-4 py-2 font-bold text-sm uppercase tracking-wider ${template === "brutal" ? "border-[4px] border-black font-black" : template === "minimal" ? "text-gray-400 font-medium" : template === "magazine" ? "bg-gray-100 text-gray-700" : template === "tech" ? "bg-indigo-100 text-indigo-600 rounded-lg font-mono" : "bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-full"}`}
                   style={template === "brutal" ? { backgroundColor: primaryColor } : {}}
                 >
                   {formattedDate}
                 </div>
-                <div className={`px-3 py-2 flex items-center gap-1.5 text-sm font-bold ${template === "brutal" ? "border-[3px] border-black bg-white" : template === "tech" ? "text-slate-400" : "text-gray-500"}`}>
+                <div className={`px-3 py-2 flex items-center gap-1.5 text-sm font-bold ${template === "brutal" ? "border-[3px] border-black bg-white" : template === "tech" ? "text-gray-500" : "text-gray-500"}`}>
                   <Clock className="w-3.5 h-3.5" />
                   {readingTime} min
                 </div>
               </div>
 
               {/* Title */}
-              <h2 className={`leading-[1.1] mb-4 ${template === "brutal" ? "text-3xl md:text-4xl font-black text-black uppercase group-hover:underline decoration-[6px] underline-offset-8" : template === "minimal" ? "text-2xl md:text-3xl font-light text-gray-900" : template === "magazine" ? "text-2xl md:text-3xl font-serif font-bold text-gray-900" : template === "tech" ? "text-2xl md:text-3xl font-mono font-bold text-white" : "text-2xl md:text-3xl font-bold text-gray-900"}`} style={template === "brutal" ? { textDecorationColor: primaryColor } : {}}>
+              <h2 className={`leading-[1.1] mb-4 ${template === "brutal" ? "text-3xl md:text-4xl font-black text-black uppercase group-hover:underline decoration-[6px] underline-offset-8" : template === "minimal" ? "text-2xl md:text-3xl font-light text-gray-900" : template === "magazine" ? "text-2xl md:text-3xl font-serif font-bold text-gray-900" : template === "tech" ? "text-2xl md:text-3xl font-mono font-bold text-gray-900" : "text-2xl md:text-3xl font-bold text-gray-900"}`} style={template === "brutal" ? { textDecorationColor: primaryColor } : {}}>
                 {article.title}
               </h2>
 
               {/* Summary */}
               {article.summary && (
-                <p className={`text-lg leading-relaxed mb-6 line-clamp-3 ${template === "tech" ? "text-slate-400" : "text-gray-700"}`}>
+                <p className={`text-lg leading-relaxed mb-6 line-clamp-3 ${template === "tech" ? "text-gray-600" : "text-gray-700"}`}>
                   {article.summary}
                 </p>
               )}
@@ -160,7 +160,7 @@ export function ArticleCard({
   if (variant === "horizontal") {
     return (
       <Link href={`/blog/${article.slug}`} className="group block">
-        <article className={`flex overflow-hidden ${template === "brutal" ? "bg-white border-[4px] border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all duration-200" : template === "minimal" ? "bg-white" : template === "tech" ? "bg-slate-800 rounded-xl border border-slate-700" : "bg-white rounded-2xl shadow-md hover:shadow-lg transition-all"}`}>
+        <article className={`flex overflow-hidden ${template === "brutal" ? "bg-white border-[4px] border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all duration-200" : template === "minimal" ? "bg-white" : template === "tech" ? "bg-white rounded-xl border border-gray-200 hover:border-indigo-400 transition-all" : "bg-white rounded-2xl shadow-md hover:shadow-lg transition-all"}`}>
           {article.image_url && (
             <div className={`relative w-1/3 min-w-[120px] overflow-hidden ${template === "brutal" ? "border-r-[4px] border-black" : ""}`}>
               <Image
@@ -173,12 +173,12 @@ export function ArticleCard({
           )}
           <div className="flex-1 p-4">
             <div
-              className={`inline-block px-2 py-1 text-[10px] font-bold uppercase mb-2 ${template === "brutal" ? "border-2 border-black" : template === "tech" ? "bg-indigo-500/20 text-indigo-400 rounded" : "text-gray-400"}`}
+              className={`inline-block px-2 py-1 text-[10px] font-bold uppercase mb-2 ${template === "brutal" ? "border-2 border-black" : template === "tech" ? "bg-indigo-100 text-indigo-600 rounded" : "text-gray-400"}`}
               style={template === "brutal" ? { backgroundColor: primaryColor } : {}}
             >
               {formattedDate}
             </div>
-            <h3 className={`leading-tight ${template === "brutal" ? "font-black text-sm uppercase text-black group-hover:underline decoration-2" : template === "minimal" ? "font-light text-sm text-gray-900" : template === "tech" ? "font-mono text-sm text-white" : "font-bold text-sm text-gray-900"}`}>
+            <h3 className={`leading-tight ${template === "brutal" ? "font-black text-sm uppercase text-black group-hover:underline decoration-2" : template === "minimal" ? "font-light text-sm text-gray-900" : template === "tech" ? "font-mono text-sm text-gray-900" : "font-bold text-sm text-gray-900"}`}>
               {article.title}
             </h3>
           </div>
@@ -263,7 +263,7 @@ export function ArticleCard({
               {template === "brutal" && (
                 <div className="w-6 h-[3px] bg-black group-hover:w-10 transition-all" />
               )}
-              <span className={`font-bold group-hover:translate-x-1 transition-transform ${template === "tech" ? "text-indigo-400" : ""}`}>&rarr;</span>
+              <span className={`font-bold group-hover:translate-x-1 transition-transform ${template === "tech" ? "text-indigo-600" : ""}`}>&rarr;</span>
             </div>
           </div>
         </div>

@@ -49,10 +49,10 @@ export default async function BlogLayout({
         };
       case "tech":
         return {
-          className: "min-h-screen flex flex-col bg-slate-950",
+          className: "min-h-screen flex flex-col bg-white",
           pattern: {
-            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99,102,241,0.15) 1px, transparent 0)`,
-            backgroundSize: "32px 32px",
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99,102,241,0.08) 1px, transparent 0)`,
+            backgroundSize: "24px 24px",
           },
         };
       case "fresh":

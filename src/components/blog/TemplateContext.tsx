@@ -113,18 +113,18 @@ export const HEADER_STYLES: Record<SiteTemplate, HeaderStyleConfig> = {
     bottomBar: "",
   },
 
-  // TECH - Moderne avec gradients
+  // TECH - Moderne avec gradients (fond clair)
   tech: {
     container: "relative",
     topBar: (primary, secondary) => ({
-      height: "2px",
-      background: `linear-gradient(90deg, ${primary}, ${secondary})`,
+      height: "3px",
+      background: `linear-gradient(90deg, ${primary}, ${secondary}, ${primary})`,
     }),
-    wrapper: (scrolled) => `transition-all duration-300 ${scrolled ? "py-3" : "py-5"} border-b border-gray-800`,
-    wrapperStyle: () => ({ backgroundColor: "#0f172a" }),
+    wrapper: (scrolled) => `transition-all duration-300 ${scrolled ? "py-3" : "py-5"} border-b border-gray-200 shadow-sm`,
+    wrapperStyle: () => ({ backgroundColor: "white" }),
     logoContainer: "w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center",
-    logoText: (scrolled) => `font-mono font-bold tracking-tight text-white ${scrolled ? "text-lg md:text-xl" : "text-xl md:text-2xl"}`,
-    navButton: "px-4 py-2 text-sm font-medium text-gray-300 hover:text-white bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-all",
+    logoText: (scrolled) => `font-mono font-bold tracking-tight text-gray-900 ${scrolled ? "text-lg md:text-xl" : "text-xl md:text-2xl"}`,
+    navButton: "px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 bg-gray-100 rounded-lg hover:bg-indigo-50 transition-all",
     navButtonStyle: () => ({}),
     bottomBar: "",
   },
@@ -204,17 +204,17 @@ export const CARD_STYLES: Record<SiteTemplate, CardStyleConfig> = {
     readMore: "font-semibold text-sm uppercase tracking-wider text-gray-900 hover:underline",
   },
 
-  // TECH - Moderne avec gradients
+  // TECH - Moderne avec gradients (fond clair)
   tech: {
-    container: "group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden hover:border-indigo-500/50 transition-all",
+    container: "group bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-indigo-400 hover:shadow-lg transition-all",
     imageWrapper: "relative aspect-[16/10] overflow-hidden",
     imageStyle: "object-cover group-hover:scale-105 transition-transform duration-300",
     contentWrapper: "p-5",
-    category: "inline-block px-2.5 py-1 text-xs font-mono font-medium bg-indigo-500/20 text-indigo-400 rounded-md mb-3",
-    title: "font-mono font-bold text-lg md:text-xl text-white leading-tight mb-3",
-    excerpt: "text-slate-400 text-sm line-clamp-2 mb-4",
-    meta: "flex items-center gap-4 text-xs text-slate-500",
-    readMore: "font-mono text-sm text-indigo-400 hover:text-indigo-300 transition-colors",
+    category: "inline-block px-2.5 py-1 text-xs font-mono font-medium bg-indigo-100 text-indigo-600 rounded-md mb-3",
+    title: "font-mono font-bold text-lg md:text-xl text-gray-900 leading-tight mb-3",
+    excerpt: "text-gray-600 text-sm line-clamp-2 mb-4",
+    meta: "flex items-center gap-4 text-xs text-gray-500",
+    readMore: "font-mono text-sm text-indigo-600 hover:text-indigo-500 transition-colors",
   },
 
   // FRESH - Coloré et dynamique
@@ -283,16 +283,16 @@ export const FOOTER_STYLES: Record<SiteTemplate, FooterStyleConfig> = {
     copyright: "text-sm text-gray-500 mt-8 pt-8 border-t border-gray-200",
   },
 
-  // TECH
+  // TECH (fond clair)
   tech: {
-    container: "border-t border-slate-800 bg-slate-950",
+    container: "border-t border-gray-200 bg-gray-50",
     containerStyle: () => ({}),
     content: "container mx-auto px-4 py-10",
-    logo: "font-mono font-bold text-xl text-white",
+    logo: "font-mono font-bold text-xl text-gray-900",
     logoStyle: () => ({}),
-    text: "text-slate-400 text-sm",
-    link: "text-slate-400 hover:text-indigo-400 text-sm transition-colors",
-    copyright: "text-xs text-slate-600 mt-8 pt-8 border-t border-slate-800",
+    text: "text-gray-600 text-sm",
+    link: "text-gray-600 hover:text-indigo-600 text-sm transition-colors",
+    copyright: "text-xs text-gray-500 mt-8 pt-8 border-t border-gray-200",
   },
 
   // FRESH
