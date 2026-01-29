@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import {
   getSiteMetrics,
   checkCredentials,
@@ -80,12 +79,25 @@ function getDateRange(period: "7d" | "28d" | "3m"): { startDate: string; endDate
   };
 }
 
-// Récupérer les analytics pour tous les sites
+// Extraire le domaine d'un siteUrl Search Console
+// Formats: "sc-domain:example.com" ou "https://example.com/"
+function extractDomainFromSiteUrl(siteUrl: string): string {
+  if (siteUrl.startsWith("sc-domain:")) {
+    return siteUrl.replace("sc-domain:", "");
+  }
+  try {
+    const url = new URL(siteUrl);
+    return url.hostname.replace(/^www\./, "");
+  } catch {
+    return siteUrl;
+  }
+}
+
+// Récupérer les analytics pour tous les sites (depuis Search Console API)
 export async function getAnalytics(
   period: "7d" | "28d" | "3m" = "28d"
 ): Promise<AnalyticsData> {
   try {
-    const supabase = await createClient();
     const { startDate, endDate } = getDateRange(period);
 
     // Vérifier les credentials (avec gestion d'erreur)
@@ -101,13 +113,8 @@ export async function getAnalytics(
       };
     }
 
-    // Récupérer tous les sites
-    const { data: sites, error } = await supabase
-      .from("sites")
-      .select("id, name, domain")
-      .order("name");
-
-    if (error || !sites) {
+    // Si credentials non configurées ou invalides
+    if (!credentialsStatus.configured || !credentialsStatus.valid) {
       return {
         summary: {
           totalClicks: 0,
@@ -125,8 +132,10 @@ export async function getAnalytics(
       };
     }
 
-    // Si credentials non configurées, retourner les sites sans données
-    if (!credentialsStatus.configured || !credentialsStatus.valid) {
+    // Récupérer les sites directement depuis Search Console API
+    const sitesResult = await listAccessibleSites();
+
+    if (!sitesResult.success || !sitesResult.sites) {
       return {
         summary: {
           totalClicks: 0,
@@ -134,23 +143,27 @@ export async function getAnalytics(
           averageCtr: 0,
           averagePosition: 0,
           sitesWithData: 0,
-          sitesWithErrors: sites.length,
+          sitesWithErrors: 0,
         },
-        sites: sites.map((site) => ({
-          siteId: site.id,
-          siteName: site.name,
-          domain: site.domain,
-          metrics: null,
-          topQueries: [],
-          topPages: [],
-          error: credentialsStatus.error || "Credentials non configurées",
-        })),
+        sites: [],
         lastUpdated: new Date().toISOString(),
-        credentialsConfigured: credentialsStatus.configured,
-        credentialsValid: credentialsStatus.valid,
-        credentialsError: credentialsStatus.error,
+        credentialsConfigured: true,
+        credentialsValid: true,
+        credentialsError: sitesResult.error,
       };
     }
+
+    // Convertir les siteUrls en objets site
+    const sites = sitesResult.sites.map((siteUrl) => {
+      const domain = extractDomainFromSiteUrl(siteUrl);
+      return {
+        siteUrl,
+        domain,
+        // Utiliser le domaine comme ID et nom
+        id: domain,
+        name: domain,
+      };
+    });
 
     // Récupérer les métriques pour chaque site (en parallèle)
     const siteAnalyticsPromises = sites.map(async (site) => {
@@ -243,33 +256,21 @@ export async function getAnalytics(
   }
 }
 
-// Récupérer les analytics pour un site spécifique
+// Récupérer les analytics pour un site spécifique (par domaine)
 export async function getSiteAnalytics(
-  siteId: string,
+  domain: string,
   period: "7d" | "28d" | "3m" = "28d"
 ): Promise<SiteAnalytics | null> {
-  const supabase = await createClient();
   const { startDate, endDate } = getDateRange(period);
-
-  // Récupérer le site
-  const { data: site, error } = await supabase
-    .from("sites")
-    .select("id, name, domain")
-    .eq("id", siteId)
-    .single();
-
-  if (error || !site) {
-    return null;
-  }
 
   // Vérifier les credentials
   const credentialsStatus = await checkCredentials();
 
   if (!credentialsStatus.configured || !credentialsStatus.valid) {
     return {
-      siteId: site.id,
-      siteName: site.name,
-      domain: site.domain,
+      siteId: domain,
+      siteName: domain,
+      domain: domain,
       metrics: null,
       topQueries: [],
       topPages: [],
@@ -278,13 +279,13 @@ export async function getSiteAnalytics(
   }
 
   // Récupérer les métriques
-  const result = await getSiteMetrics(site.domain, startDate, endDate);
+  const result = await getSiteMetrics(domain, startDate, endDate);
 
   if (result.success && result.data) {
     return {
-      siteId: site.id,
-      siteName: site.name,
-      domain: site.domain,
+      siteId: domain,
+      siteName: domain,
+      domain: domain,
       metrics: result.data.metrics,
       topQueries: result.data.topQueries.map((row) => ({
         query: row.keys[0] || "",
@@ -304,9 +305,9 @@ export async function getSiteAnalytics(
   }
 
   return {
-    siteId: site.id,
-    siteName: site.name,
-    domain: site.domain,
+    siteId: domain,
+    siteName: domain,
+    domain: domain,
     metrics: null,
     topQueries: [],
     topPages: [],
