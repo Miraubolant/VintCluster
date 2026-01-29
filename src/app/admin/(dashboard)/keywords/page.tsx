@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Sparkles } from "lucide-react";
 import {
   KeywordsStats,
   KeywordsFilters,
@@ -128,6 +129,12 @@ export default function KeywordsPage() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Actualiser
           </Button>
+          <Link href="/admin/keywords/generate">
+            <Button variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Générer IA
+            </Button>
+          </Link>
           <Button onClick={() => setImportDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Importer
