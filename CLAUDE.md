@@ -346,6 +346,16 @@ interface ImageOptions {
 
 Périodes supportées : `"7d"` | `"28d"` | `"3m"`
 
+### Keyword Generator (`lib/actions/keyword-generator.ts`)
+- `generateKeywordsWithAI(seed, context, count)` - Génération IA via GPT-4o
+- `getGoogleAutocomplete(query)` - Suggestions Google Autocomplete
+- `generateWithModifiers(seed)` - Combinaisons préfixes/suffixes français
+- `generateQuestions(seed)` - Transforme en questions (comment, pourquoi...)
+- `expandSemantically(seed, existing)` - Expansion LSI keywords
+- `generateLongTail(seed, cluster)` - Variations long-tail 4-6 mots
+- `generateAllKeywords(seed, options)` - Génération complète (toutes sources)
+- `analyzeCompetitorKeywords(topic)` - Analyse de niche concurrentielle
+
 ## Variables d'Environnement
 
 ```env
