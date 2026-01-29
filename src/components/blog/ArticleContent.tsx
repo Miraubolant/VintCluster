@@ -194,16 +194,16 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
       )}
 
       {/* Content */}
-      <div className="prose prose-lg max-w-none
+      <div className="prose prose-xl max-w-none
         prose-headings:font-black prose-headings:uppercase prose-headings:text-black prose-headings:tracking-tight
-        prose-h2:text-3xl prose-h2:mt-20 prose-h2:mb-8 prose-h2:relative prose-h2:pl-6 prose-h2:scroll-mt-24
-        prose-h3:text-2xl prose-h3:mt-14 prose-h3:mb-6 prose-h3:scroll-mt-24
-        prose-p:text-gray-800 prose-p:leading-[1.9] prose-p:mb-6
+        prose-h2:text-4xl prose-h2:md:text-5xl prose-h2:mt-24 prose-h2:mb-10 prose-h2:relative prose-h2:scroll-mt-24
+        prose-h3:text-2xl prose-h3:md:text-3xl prose-h3:mt-16 prose-h3:mb-8 prose-h3:scroll-mt-24
+        prose-p:text-gray-800 prose-p:leading-[1.9] prose-p:mb-6 prose-p:text-lg
         prose-a:text-black prose-a:font-bold prose-a:no-underline
         prose-strong:text-black prose-strong:font-black
-        prose-blockquote:border-l-0 prose-blockquote:bg-gray-100 prose-blockquote:py-8 prose-blockquote:px-10 prose-blockquote:not-italic prose-blockquote:relative prose-blockquote:my-12
+        prose-blockquote:border-l-0 prose-blockquote:bg-gray-100 prose-blockquote:py-8 prose-blockquote:px-10 prose-blockquote:not-italic prose-blockquote:relative prose-blockquote:my-14
         prose-ul:my-10 prose-ul:space-y-3 prose-ol:my-10 prose-ol:space-y-3
-        prose-li:text-gray-800 prose-li:leading-[1.8] prose-li:mb-2
+        prose-li:text-gray-800 prose-li:leading-[1.8] prose-li:mb-3 prose-li:text-lg
         prose-img:border-[4px] prose-img:border-black prose-img:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]
       ">
         <ReactMarkdown

@@ -81,11 +81,11 @@ const SEO_CLASSIC_PROMPT = `${BASE_CONTEXT}
 ### OBJECTIF
 Créer un article parfaitement structuré pour ranker sur Google avec les featured snippets.
 
-### STRUCTURE (1500-2000 mots)
-1. **Intro (100-150 mots)** - Réponse directe à la question principale en 40-60 mots (featured snippet ready)
-2. **4-5 sections H2** - Titres descriptifs avec mot-clé principal
-3. **H3 si pertinent** - 1-2 sous-sections max par H2
-4. **Conclusion (80-100 mots)** - Résumé + CTA naturel
+### STRUCTURE (2500-3000 mots)
+1. **Intro (150-200 mots)** - Réponse directe à la question principale en 40-60 mots (featured snippet ready)
+2. **5-7 sections H2** - Titres descriptifs avec mot-clé principal
+3. **H3 si pertinent** - 2-3 sous-sections par H2
+4. **Conclusion (100-150 mots)** - Résumé + CTA naturel
 
 ### OPTIMISATION FEATURED SNIPPETS
 - Premier paragraphe de chaque section : définition ou réponse directe (40-60 mots)
@@ -111,11 +111,11 @@ const AI_SEARCH_PROMPT = `${BASE_CONTEXT}
 ### OBJECTIF
 Optimiser pour ChatGPT, Perplexity, Google SGE et les assistants IA qui citent des sources.
 
-### STRUCTURE OPTIMISÉE IA (1500-2000 mots)
+### STRUCTURE OPTIMISÉE IA (2500-3000 mots)
 1. **Answer Box (50-60 mots)** - Réponse directe et complète dès le premier paragraphe
-2. **Définitions encadrées** - Format "**Qu'est-ce que X ?** X est..." pour chaque concept clé
+2. **5-7 sections H2** avec définitions encadrées - Format "**Qu'est-ce que X ?** X est..."
 3. **Listes structurées** - Les IA adorent les formats clairs et numérotés
-4. **Exemples concrets** - Avec chiffres vérifiables
+4. **Exemples concrets détaillés** - Avec chiffres vérifiables et cas pratiques
 
 ### FORMAT "CITATION-READY"
 - Chaque section doit pouvoir être citée indépendamment
@@ -154,22 +154,22 @@ Analyse le titre et adapte le style :
 - "Test", "avis", "j'ai essayé" → Étude de cas avec méthodo et résultats
 - "vs", "ou", "comparatif" → Tableau comparatif + avantages/inconvénients
 
-### STRUCTURE PREMIUM (1800-2200 mots)
+### STRUCTURE PREMIUM (2500-3000 mots)
 
-#### 1. HOOK + ANSWER BOX (100-150 mots)
+#### 1. HOOK + ANSWER BOX (150-200 mots)
 - Accroche personnelle qui crée la connexion
 - Réponse directe en 40-60 mots (featured snippet)
 - Promesse de valeur pour la suite
 
-#### 2. CORPS ENRICHI (1400-1700 mots)
-- 5-6 sections H2 avec mots-clés LSI
+#### 2. CORPS ENRICHI (2000-2500 mots)
+- 6-8 sections H2 avec mots-clés LSI
 - Définitions encadrées pour les concepts clés
 - Listes à puces ET numérotées alternées
-- 1 tableau Markdown si comparaison pertinente
-- Exemples concrets avec chiffres
+- 1-2 tableaux Markdown si comparaison pertinente
+- Exemples concrets détaillés avec chiffres
 
-#### 3. CONCLUSION ACTIONNABLE (100-150 mots)
-- Résumé en 3 points clés
+#### 3. CONCLUSION ACTIONNABLE (150-200 mots)
+- Résumé en 5 points clés
 - CTA naturel vers l'action
 
 ### SIGNAUX E-E-A-T (AUTORITÉ)
@@ -273,12 +273,13 @@ ${existingFaqFormatted}
 ## INSTRUCTIONS
 
 Transforme cet article en suivant TOUTES les directives du système.
-Garde le sujet principal mais enrichis massivement le contenu.
+Garde le sujet principal mais enrichis MASSIVEMENT le contenu.
+OBJECTIF: 2500-3000 MOTS minimum. Développe chaque section en profondeur.
 
 Retourne UNIQUEMENT un JSON valide:
 {
   "title": "Titre SEO optimisé (50-65 caractères, avec mot-clé principal)",
-  "content": "Contenu Markdown complet (## pour H2, ### pour H3, listes, tableaux si pertinent)",
+  "content": "Contenu Markdown LONG et DÉTAILLÉ (2500-3000 mots, ## pour H2, ### pour H3, listes, tableaux)",
   "summary": "Meta description accrocheuse (150-160 caractères)",
   "faq": [
     {"question": "Question 1?", "answer": "Réponse complète avec données (60-100 mots)"},
@@ -319,8 +320,8 @@ Retourne UNIQUEMENT un JSON valide:
     throw new Error("Titre invalide ou trop court");
   }
 
-  if (!parsed.content || parsed.content.length < 1500) {
-    throw new Error("Contenu trop court (minimum attendu non atteint)");
+  if (!parsed.content || parsed.content.length < 3000) {
+    throw new Error("Contenu trop court (minimum 2500 mots attendus)");
   }
 
   // Use existing FAQ if new one is insufficient
