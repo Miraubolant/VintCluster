@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Trash2, CheckCircle, XCircle, ExternalLink } from "lucide-react";
 import type { Article, ArticleStatus } from "@/types/database";
 import Image from "next/image";
 
@@ -185,22 +185,49 @@ export function ArticlesTable({
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onView(article)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Aperçu
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit(article)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Modifier
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
+                  <div className="flex items-center gap-1">
+                    {/* Bouton voir sur le site (si publié) */}
+                    {article.status === "published" && article.site?.domain && (
+                      <a
+                        href={`https://${article.site.domain}/blog/${article.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Voir sur le site"
+                      >
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </a>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onView(article)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Aperçu
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit(article)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Modifier
+                        </DropdownMenuItem>
+                        {article.site?.domain && (
+                          <DropdownMenuItem asChild>
+                            <a
+                              href={`https://${article.site.domain}/blog/${article.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center"
+                            >
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Voir sur le site
+                            </a>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
                       {article.status === "draft" && (
                         <DropdownMenuItem
                           onClick={() => onStatusChange(article.id, "ready")}
@@ -233,8 +260,9 @@ export function ArticlesTable({
                         <Trash2 className="mr-2 h-4 w-4" />
                         Supprimer
                       </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </td>
               </tr>
             ))}
