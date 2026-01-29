@@ -9,7 +9,8 @@ import {
   Tag,
   Calendar,
   History,
-  Settings
+  Settings,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ const navigation = [
   { name: "Mots-clés", href: "/admin/keywords", icon: Tag },
   { name: "Articles", href: "/admin/articles", icon: FileText },
   { name: "Planification", href: "/admin/scheduler", icon: Calendar },
+  { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { name: "Historique", href: "/admin/logs", icon: History },
 ];
 
