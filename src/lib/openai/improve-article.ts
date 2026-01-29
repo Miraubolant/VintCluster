@@ -1,8 +1,8 @@
 import { getOpenAIClient } from "./client";
 import type { FAQItem } from "@/types/database";
 
-// Model options for improvement
-export type ImprovementModel = "gpt-4.1" | "gpt-4.1-mini" | "gpt-4o" | "gpt-4-turbo";
+// Model options for improvement (modèles disponibles sur OpenAI API)
+export type ImprovementModel = "gpt-4o" | "gpt-4o-mini" | "gpt-4-turbo";
 
 // Improvement modes
 export type ImprovementMode = "seo-classic" | "ai-search" | "full-pbn";
@@ -21,23 +21,17 @@ export interface ImprovementOptions {
 
 // Configuration des modèles disponibles
 export const IMPROVEMENT_MODELS: Record<ImprovementModel, { name: string; description: string; speed: string; maxTokens: number }> = {
-  "gpt-4.1": {
-    name: "GPT-4.1 (Recommandé)",
-    description: "Le plus récent, meilleure qualité, articles très longs",
-    speed: "~20s/article",
-    maxTokens: 16384,
-  },
-  "gpt-4.1-mini": {
-    name: "GPT-4.1 Mini",
-    description: "Rapide et économique, bat GPT-4o, -83% coût",
-    speed: "~10s/article",
-    maxTokens: 16384,
-  },
   "gpt-4o": {
-    name: "GPT-4o",
-    description: "Bon équilibre qualité/vitesse",
+    name: "GPT-4o (Recommandé)",
+    description: "Meilleure qualité, articles longs",
     speed: "~15s/article",
-    maxTokens: 8192,
+    maxTokens: 16384,
+  },
+  "gpt-4o-mini": {
+    name: "GPT-4o Mini",
+    description: "Rapide et économique, -90% coût",
+    speed: "~8s/article",
+    maxTokens: 16384,
   },
   "gpt-4-turbo": {
     name: "GPT-4 Turbo",
