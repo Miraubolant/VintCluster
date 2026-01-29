@@ -81,19 +81,147 @@ function getDateRange(period: "7d" | "28d" | "3m"): { startDate: string; endDate
 export async function getAnalytics(
   period: "7d" | "28d" | "3m" = "28d"
 ): Promise<AnalyticsData> {
-  const supabase = await createClient();
-  const { startDate, endDate } = getDateRange(period);
+  try {
+    const supabase = await createClient();
+    const { startDate, endDate } = getDateRange(period);
 
-  // Vérifier les credentials
-  const credentialsStatus = await checkCredentials();
+    // Vérifier les credentials (avec gestion d'erreur)
+    let credentialsStatus: { configured: boolean; valid: boolean; error?: string };
+    try {
+      credentialsStatus = await checkCredentials();
+    } catch (credError) {
+      console.error("Error checking credentials:", credError);
+      credentialsStatus = {
+        configured: true,
+        valid: false,
+        error: credError instanceof Error ? credError.message : "Erreur de vérification des credentials",
+      };
+    }
 
-  // Récupérer tous les sites
-  const { data: sites, error } = await supabase
-    .from("sites")
-    .select("id, name, domain")
-    .order("name");
+    // Récupérer tous les sites
+    const { data: sites, error } = await supabase
+      .from("sites")
+      .select("id, name, domain")
+      .order("name");
 
-  if (error || !sites) {
+    if (error || !sites) {
+      return {
+        summary: {
+          totalClicks: 0,
+          totalImpressions: 0,
+          averageCtr: 0,
+          averagePosition: 0,
+          sitesWithData: 0,
+          sitesWithErrors: 0,
+        },
+        sites: [],
+        lastUpdated: new Date().toISOString(),
+        credentialsConfigured: credentialsStatus.configured,
+        credentialsValid: credentialsStatus.valid,
+        credentialsError: credentialsStatus.error,
+      };
+    }
+
+    // Si credentials non configurées, retourner les sites sans données
+    if (!credentialsStatus.configured || !credentialsStatus.valid) {
+      return {
+        summary: {
+          totalClicks: 0,
+          totalImpressions: 0,
+          averageCtr: 0,
+          averagePosition: 0,
+          sitesWithData: 0,
+          sitesWithErrors: sites.length,
+        },
+        sites: sites.map((site) => ({
+          siteId: site.id,
+          siteName: site.name,
+          domain: site.domain,
+          metrics: null,
+          topQueries: [],
+          topPages: [],
+          error: credentialsStatus.error || "Credentials non configurées",
+        })),
+        lastUpdated: new Date().toISOString(),
+        credentialsConfigured: credentialsStatus.configured,
+        credentialsValid: credentialsStatus.valid,
+        credentialsError: credentialsStatus.error,
+      };
+    }
+
+    // Récupérer les métriques pour chaque site (en parallèle)
+    const siteAnalyticsPromises = sites.map(async (site) => {
+      const result = await getSiteMetrics(site.domain, startDate, endDate);
+
+      if (result.success && result.data) {
+        return {
+          siteId: site.id,
+          siteName: site.name,
+          domain: site.domain,
+          metrics: result.data.metrics,
+          topQueries: result.data.topQueries.map((row) => ({
+            query: row.keys[0] || "",
+            clicks: row.clicks,
+            impressions: row.impressions,
+            ctr: row.ctr,
+            position: row.position,
+          })),
+          topPages: result.data.topPages.map((row) => ({
+            page: row.keys[0] || "",
+            clicks: row.clicks,
+            impressions: row.impressions,
+            ctr: row.ctr,
+            position: row.position,
+          })),
+        };
+      }
+
+      return {
+        siteId: site.id,
+        siteName: site.name,
+        domain: site.domain,
+        metrics: null,
+        topQueries: [],
+        topPages: [],
+        error: result.error,
+      };
+    });
+
+    const siteAnalytics = await Promise.all(siteAnalyticsPromises);
+
+    // Calculer le résumé
+    const sitesWithData = siteAnalytics.filter((s) => s.metrics !== null);
+    const sitesWithErrors = siteAnalytics.filter((s) => s.error);
+
+    const summary: AnalyticsSummary = {
+      totalClicks: sitesWithData.reduce((sum, s) => sum + (s.metrics?.clicks || 0), 0),
+      totalImpressions: sitesWithData.reduce(
+        (sum, s) => sum + (s.metrics?.impressions || 0),
+        0
+      ),
+      averageCtr:
+        sitesWithData.length > 0
+          ? sitesWithData.reduce((sum, s) => sum + (s.metrics?.ctr || 0), 0) /
+            sitesWithData.length
+          : 0,
+      averagePosition:
+        sitesWithData.length > 0
+          ? sitesWithData.reduce((sum, s) => sum + (s.metrics?.position || 0), 0) /
+            sitesWithData.length
+          : 0,
+      sitesWithData: sitesWithData.length,
+      sitesWithErrors: sitesWithErrors.length,
+    };
+
+    return {
+      summary,
+      sites: siteAnalytics,
+      lastUpdated: new Date().toISOString(),
+      credentialsConfigured: credentialsStatus.configured,
+      credentialsValid: credentialsStatus.valid,
+    };
+  } catch (error) {
+    console.error("Error in getAnalytics:", error);
     return {
       summary: {
         totalClicks: 0,
@@ -105,110 +233,11 @@ export async function getAnalytics(
       },
       sites: [],
       lastUpdated: new Date().toISOString(),
-      credentialsConfigured: credentialsStatus.configured,
-      credentialsValid: credentialsStatus.valid,
-      credentialsError: credentialsStatus.error,
+      credentialsConfigured: false,
+      credentialsValid: false,
+      credentialsError: error instanceof Error ? error.message : "Erreur inattendue",
     };
   }
-
-  // Si credentials non configurées, retourner les sites sans données
-  if (!credentialsStatus.configured || !credentialsStatus.valid) {
-    return {
-      summary: {
-        totalClicks: 0,
-        totalImpressions: 0,
-        averageCtr: 0,
-        averagePosition: 0,
-        sitesWithData: 0,
-        sitesWithErrors: sites.length,
-      },
-      sites: sites.map((site) => ({
-        siteId: site.id,
-        siteName: site.name,
-        domain: site.domain,
-        metrics: null,
-        topQueries: [],
-        topPages: [],
-        error: credentialsStatus.error || "Credentials non configurées",
-      })),
-      lastUpdated: new Date().toISOString(),
-      credentialsConfigured: credentialsStatus.configured,
-      credentialsValid: credentialsStatus.valid,
-      credentialsError: credentialsStatus.error,
-    };
-  }
-
-  // Récupérer les métriques pour chaque site (en parallèle)
-  const siteAnalyticsPromises = sites.map(async (site) => {
-    const result = await getSiteMetrics(site.domain, startDate, endDate);
-
-    if (result.success && result.data) {
-      return {
-        siteId: site.id,
-        siteName: site.name,
-        domain: site.domain,
-        metrics: result.data.metrics,
-        topQueries: result.data.topQueries.map((row) => ({
-          query: row.keys[0] || "",
-          clicks: row.clicks,
-          impressions: row.impressions,
-          ctr: row.ctr,
-          position: row.position,
-        })),
-        topPages: result.data.topPages.map((row) => ({
-          page: row.keys[0] || "",
-          clicks: row.clicks,
-          impressions: row.impressions,
-          ctr: row.ctr,
-          position: row.position,
-        })),
-      };
-    }
-
-    return {
-      siteId: site.id,
-      siteName: site.name,
-      domain: site.domain,
-      metrics: null,
-      topQueries: [],
-      topPages: [],
-      error: result.error,
-    };
-  });
-
-  const siteAnalytics = await Promise.all(siteAnalyticsPromises);
-
-  // Calculer le résumé
-  const sitesWithData = siteAnalytics.filter((s) => s.metrics !== null);
-  const sitesWithErrors = siteAnalytics.filter((s) => s.error);
-
-  const summary: AnalyticsSummary = {
-    totalClicks: sitesWithData.reduce((sum, s) => sum + (s.metrics?.clicks || 0), 0),
-    totalImpressions: sitesWithData.reduce(
-      (sum, s) => sum + (s.metrics?.impressions || 0),
-      0
-    ),
-    averageCtr:
-      sitesWithData.length > 0
-        ? sitesWithData.reduce((sum, s) => sum + (s.metrics?.ctr || 0), 0) /
-          sitesWithData.length
-        : 0,
-    averagePosition:
-      sitesWithData.length > 0
-        ? sitesWithData.reduce((sum, s) => sum + (s.metrics?.position || 0), 0) /
-          sitesWithData.length
-        : 0,
-    sitesWithData: sitesWithData.length,
-    sitesWithErrors: sitesWithErrors.length,
-  };
-
-  return {
-    summary,
-    sites: siteAnalytics,
-    lastUpdated: new Date().toISOString(),
-    credentialsConfigured: credentialsStatus.configured,
-    credentialsValid: credentialsStatus.valid,
-  };
 }
 
 // Récupérer les analytics pour un site spécifique
