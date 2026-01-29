@@ -514,8 +514,24 @@ export async function prepareBulkGenerationWithOptions(
   const tasks: BulkGenerationTask[] = [];
   const errors: string[] = [];
 
-  // Si des keywords personnalisés sont fournis, les utiliser
+  // Si des keywords personnalisés sont fournis, les utiliser pour TOUS les sites
   const useCustomKeywords = options.keywordIds && options.keywordIds.length > 0;
+
+  // Vérifier une seule fois si les keywords personnalisés sont valides (pending)
+  let validCustomKeywordIds: string[] = [];
+  if (useCustomKeywords) {
+    const { data: validKeywords } = await supabase
+      .from("keywords")
+      .select("id")
+      .in("id", options.keywordIds!)
+      .eq("status", "pending");
+
+    validCustomKeywordIds = validKeywords?.map(k => k.id) || [];
+
+    if (validCustomKeywordIds.length === 0) {
+      return { tasks: [], errors: ["Aucun des mots-clés sélectionnés n'est disponible (statut pending)"] };
+    }
+  }
 
   for (let i = 0; i < siteIds.length; i++) {
     const siteId = siteIds[i];
@@ -536,15 +552,9 @@ export async function prepareBulkGenerationWithOptions(
     // Déterminer les keywords à utiliser
     let keywordIds: string[];
     if (useCustomKeywords) {
-      // Filtrer les keywords pour ce site (ceux liés au site ou globaux)
-      const { data: validKeywords } = await supabase
-        .from("keywords")
-        .select("id")
-        .in("id", options.keywordIds!)
-        .eq("status", "pending")
-        .or(`site_id.eq.${siteId},site_id.is.null`);
-
-      keywordIds = validKeywords?.map(k => k.id) || [];
+      // Utiliser les keywords sélectionnés par l'utilisateur (déjà validés)
+      // Tous les sites partagent le même pool de keywords sélectionnés
+      keywordIds = validCustomKeywordIds;
     } else {
       // Utiliser les keywords de la config existante
       const { data: config } = await supabase
@@ -553,11 +563,24 @@ export async function prepareBulkGenerationWithOptions(
         .eq("site_id", siteId)
         .single();
 
-      keywordIds = (config?.keyword_ids as string[]) || [];
+      const configKeywordIds = (config?.keyword_ids as string[]) || [];
+
+      // Vérifier que les keywords de la config sont encore pending
+      if (configKeywordIds.length > 0) {
+        const { data: validConfigKeywords } = await supabase
+          .from("keywords")
+          .select("id")
+          .in("id", configKeywordIds)
+          .eq("status", "pending");
+
+        keywordIds = validConfigKeywords?.map(k => k.id) || [];
+      } else {
+        keywordIds = [];
+      }
     }
 
     if (keywordIds.length === 0) {
-      errors.push(`${site.name}: Aucun mot-clé disponible`);
+      errors.push(`${site.name}: Aucun mot-clé disponible (vérifiez les keywords pending)`);
       continue;
     }
 
