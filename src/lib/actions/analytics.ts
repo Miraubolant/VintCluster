@@ -5,12 +5,15 @@ import {
   getSiteMetrics,
   checkCredentials,
   listAccessibleSites,
-  type SearchConsoleSiteData,
-  type SearchConsoleMetrics,
 } from "@/lib/google/search-console";
 
-// Types exportés
-export type { SearchConsoleSiteData, SearchConsoleMetrics };
+// Type pour les métriques (défini localement pour éviter les problèmes d'export)
+export interface SearchConsoleMetrics {
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+}
 
 export interface SiteAnalytics {
   siteId: string;
