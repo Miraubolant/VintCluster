@@ -338,3 +338,42 @@ export async function generateFavicon(
     return { error: "Erreur lors de la génération du favicon" };
   }
 }
+
+/**
+ * Génère et met à jour le SEO d'un site en une seule action
+ */
+export async function generateAndUpdateSiteSEO(
+  siteId: string,
+  siteName: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Générer le SEO
+    const seoResult = await generateSiteSEO(siteName);
+
+    if ("error" in seoResult) {
+      return { success: false, error: seoResult.error };
+    }
+
+    // Mettre à jour le site
+    const supabase = await createClient();
+    const { error: updateError } = await supabase
+      .from("sites")
+      .update({
+        meta_title: seoResult.meta_title,
+        meta_description: seoResult.meta_description,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", siteId);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    revalidatePath("/admin/sites");
+    revalidatePath(`/admin/sites/${siteId}`);
+
+    return { success: true };
+  } catch {
+    return { success: false, error: "Erreur lors de la génération SEO" };
+  }
+}
