@@ -44,10 +44,22 @@ function hasCredentials(): boolean {
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return "";
 
-  let formattedKey = key;
+  let formattedKey = key.trim();
+
+  // Nettoyer les guillemets potentiels au début/fin
+  formattedKey = formattedKey.replace(/^["']|["']$/g, "");
+
+  // Cas 0: Clé encodée en Base64 (recommandé pour éviter les problèmes de newline)
+  // Si la clé ne commence pas par "-----BEGIN", c'est probablement du Base64
+  if (!formattedKey.includes("-----BEGIN")) {
+    try {
+      formattedKey = Buffer.from(formattedKey, "base64").toString("utf-8");
+    } catch {
+      console.error("Failed to decode Base64 key");
+    }
+  }
 
   // Cas 1: La clé contient des séquences \n littérales (backslash + n comme 2 caractères)
-  // Cela arrive quand Coolify stocke "\\n" ou quand on colle la clé avec \n visible
   if (formattedKey.includes("\\n")) {
     formattedKey = formattedKey.split("\\n").join("\n");
   }
@@ -59,9 +71,6 @@ function formatPrivateKey(key: string | undefined): string {
 
   // Cas 3: Vérifier si la clé a déjà des vrais sauts de ligne (Coolify multiline)
   // Dans ce cas, on ne fait rien de plus
-
-  // Nettoyer les guillemets potentiels au début/fin
-  formattedKey = formattedKey.replace(/^["']|["']$/g, "");
 
   // S'assurer que la clé a le bon format
   if (!formattedKey.includes("-----BEGIN PRIVATE KEY-----")) {
