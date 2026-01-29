@@ -55,7 +55,7 @@ import {
 import { getSites } from "@/lib/actions/sites";
 import { useBulkProgress } from "@/contexts/BulkProgressContext";
 import { MODEL_INFO, type ImageModel } from "@/lib/replicate";
-import { IMPROVEMENT_MODELS, type ImprovementModel } from "@/lib/openai";
+import { IMPROVEMENT_MODELS, IMPROVEMENT_MODES, type ImprovementModel, type ImprovementMode } from "@/lib/openai";
 import { toast } from "sonner";
 import type { Site, Article, ArticleStatus } from "@/types/database";
 
@@ -108,6 +108,7 @@ export default function ArticlesPage() {
   // AI Improvement dialog
   const [improveDialogOpen, setImproveDialogOpen] = useState(false);
   const [selectedAIModel, setSelectedAIModel] = useState<ImprovementModel>("gpt-4o");
+  const [selectedImproveMode, setSelectedImproveMode] = useState<ImprovementMode>("full-pbn");
 
   // Progress tracking
   const { progress, setProgress, isCancelled } = useBulkProgress();
@@ -349,7 +350,7 @@ export default function ArticlesPage() {
         currentSite: `Amélioration: ${article.title.substring(0, 35)}${article.title.length > 35 ? "..." : ""} (${i + 1}/${selectedIds.length})`,
       }));
 
-      const result = await improveArticleWithAI(article.id, selectedAIModel);
+      const result = await improveArticleWithAI(article.id, selectedAIModel, selectedImproveMode);
 
       // Check if cancelled after improvement
       if (cancelledRef.current) {
@@ -654,16 +655,39 @@ export default function ArticlesPage() {
 
       {/* Dialog d'amélioration IA */}
       <Dialog open={improveDialogOpen} onOpenChange={setImproveDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Améliorer avec l'IA</DialogTitle>
             <DialogDescription>
-              Améliorer {selectedIds.length} article(s) avec l'IA. Le titre, le contenu et la FAQ seront enrichis (1500-2000 mots).
-              Le statut actuel sera conservé.
+              Améliorer {selectedIds.length} article(s) avec l'IA. Structure, SEO, FAQ et CTA seront optimisés.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Mode selector */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Mode d'amélioration</label>
+              <Select value={selectedImproveMode} onValueChange={(value) => setSelectedImproveMode(value as ImprovementMode)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(IMPROVEMENT_MODES) as ImprovementMode[]).map((mode) => (
+                    <SelectItem key={mode} value={mode}>
+                      <div className="flex items-center gap-2">
+                        <span>{IMPROVEMENT_MODES[mode].icon}</span>
+                        <span>{IMPROVEMENT_MODES[mode].name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                {IMPROVEMENT_MODES[selectedImproveMode].description}
+              </p>
+            </div>
+
+            {/* Model selector */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Modèle IA</label>
               <Select value={selectedAIModel} onValueChange={(value) => setSelectedAIModel(value as ImprovementModel)}>
@@ -686,9 +710,36 @@ export default function ArticlesPage() {
               </p>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p className="text-xs text-amber-800">
-                <strong>Note:</strong> L'amélioration remplace le contenu original. Les articles seront enrichis avec une meilleure structure SEO, des FAQ plus complètes et des CTA vers nos produits.
+            {/* Info box based on mode */}
+            <div className={`rounded-lg p-3 ${
+              selectedImproveMode === "full-pbn"
+                ? "bg-emerald-50 border border-emerald-200"
+                : selectedImproveMode === "ai-search"
+                ? "bg-blue-50 border border-blue-200"
+                : "bg-amber-50 border border-amber-200"
+            }`}>
+              <p className={`text-xs ${
+                selectedImproveMode === "full-pbn"
+                  ? "text-emerald-800"
+                  : selectedImproveMode === "ai-search"
+                  ? "text-blue-800"
+                  : "text-amber-800"
+              }`}>
+                {selectedImproveMode === "full-pbn" && (
+                  <>
+                    <strong>🚀 Full PBN:</strong> Stratégie complète avec détection auto du format (guide, liste, étude de cas, comparatif), signaux E-E-A-T, enrichissement sémantique et FAQ premium.
+                  </>
+                )}
+                {selectedImproveMode === "ai-search" && (
+                  <>
+                    <strong>🤖 AI Search:</strong> Optimisé pour être cité par ChatGPT, Perplexity et Google SGE. Format "citation-ready" avec answer boxes et définitions encadrées.
+                  </>
+                )}
+                {selectedImproveMode === "seo-classic" && (
+                  <>
+                    <strong>🎯 SEO Classic:</strong> Structure optimisée pour les featured snippets Google. Titres H2/H3 descriptifs, listes à puces et FAQ snippet-ready.
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -699,7 +750,13 @@ export default function ArticlesPage() {
             </Button>
             <Button
               onClick={handleBulkImproveArticles}
-              className="bg-amber-600 hover:bg-amber-700"
+              className={
+                selectedImproveMode === "full-pbn"
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : selectedImproveMode === "ai-search"
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-amber-600 hover:bg-amber-700"
+              }
             >
               <Sparkles className="h-4 w-4 mr-2" />
               Améliorer {selectedIds.length} article(s)

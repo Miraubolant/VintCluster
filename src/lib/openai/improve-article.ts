@@ -4,6 +4,9 @@ import type { FAQItem } from "@/types/database";
 // Model options for improvement
 export type ImprovementModel = "gpt-4o" | "gpt-4-turbo";
 
+// Improvement modes
+export type ImprovementMode = "seo-classic" | "ai-search" | "full-pbn";
+
 export interface ImprovedArticle {
   title: string;
   content: string;
@@ -13,6 +16,7 @@ export interface ImprovedArticle {
 
 export interface ImprovementOptions {
   model: ImprovementModel;
+  mode: ImprovementMode;
 }
 
 // Configuration des modèles disponibles
@@ -29,84 +33,197 @@ export const IMPROVEMENT_MODELS: Record<ImprovementModel, { name: string; descri
   },
 };
 
-const IMPROVEMENT_SYSTEM_PROMPT = `Tu es un expert en rédaction SEO et optimisation de contenu pour l'IA. Tu améliores des articles de blog existants sur la vente sur Vinted et les outils IA pour vendeurs.
+// Configuration des modes d'amélioration
+export const IMPROVEMENT_MODES: Record<ImprovementMode, { name: string; description: string; icon: string }> = {
+  "seo-classic": {
+    name: "SEO Classic",
+    description: "Structure optimisée, mots-clés, featured snippets Google",
+    icon: "🎯",
+  },
+  "ai-search": {
+    name: "AI Search Ready",
+    description: "Optimisé ChatGPT, Perplexity, Google SGE (réponses directes)",
+    icon: "🤖",
+  },
+  "full-pbn": {
+    name: "Full PBN",
+    description: "Stratégie complète : SEO + AI Search + Autorité + E-E-A-T",
+    icon: "🚀",
+  },
+};
 
-## OBJECTIF
-Transformer un article existant en un contenu premium de 1500-2000 mots, optimisé pour :
-- Le référencement Google (SEO traditionnel)
-- L'affichage en featured snippets
-- Les réponses IA (ChatGPT, Perplexity, Google SGE)
+// Prompt de base commun à tous les modes
+const BASE_CONTEXT = `Tu es un expert SEO français spécialisé dans les blogs sur Vinted et la vente de seconde main.
+Tu travailles pour un réseau de blogs (PBN) qui promeut subtilement 3 produits SaaS.
 
-## NOS PRODUITS SAAS (à intégrer naturellement)
-1. **VintDress** (vintdress.com) - Génère des photos portées réalistes en 30 secondes avec l'IA. Pas de mannequin, pas de shooting.
-2. **VintBoost** (vintboost.com) - Génère des vidéos professionnelles de ton vestiaire en 30 secondes. Zéro montage requis.
-3. **VintPower** (vintpower.com) - IA qui génère titre, description et prix optimisés + extension Vinted.
+## NOS PRODUITS SAAS
+1. **VintDress** (vintdress.com) - Génère des photos portées réalistes en 30s avec l'IA. Pas de mannequin, pas de shooting.
+2. **VintBoost** (vintboost.com) - Génère des vidéos pro de ton vestiaire en 30s. Zéro montage requis.
+3. **VintPower** (vintpower.com) - IA qui génère titre, description, prix optimisés + extension Vinted.
 
-## TON & STYLE
-- Blog personnel, comme un ami qui partage ses conseils
-- Tutoiement OBLIGATOIRE ("tu", "ton", "ta", "tes")
-- Conversationnel mais informatif
-- Évite le jargon technique excessif
-- Phrases courtes et percutantes
-- Utilise des expressions françaises naturelles
+## TON & STYLE OBLIGATOIRE
+- Tutoiement OBLIGATOIRE partout ("tu", "ton", "tes")
+- Ton amical, comme un vendeur expérimenté qui partage ses secrets
+- Phrases courtes et percutantes (max 20 mots par phrase)
+- Zéro jargon technique inutile
+- Expressions françaises naturelles et actuelles
 
-## VOCABULAIRE VINTED À UTILISER
-Intègre naturellement ces termes : vendeur, acheteur, vestiaire, boost, mise en avant, algorithme Vinted, photos, annonces, descriptions, négociation, livraison Mondial Relay, Vinted Pro, évaluation, followers, favoris, offres, bundle, lot
+## VOCABULAIRE VINTED (à utiliser naturellement)
+vestiaire, boost, mise en avant, algorithme, photos, annonces, descriptions, négociation,
+Mondial Relay, Vinted Pro, évaluation, followers, favoris, offres, bundle, lot, acheteur,
+vendeur top, relisting, visibilité, prix de réserve`;
 
-## STRUCTURE OBLIGATOIRE (1500-2000 mots)
+// Prompt pour le mode SEO Classic
+const SEO_CLASSIC_PROMPT = `${BASE_CONTEXT}
 
-### 1. Introduction (100-150 mots)
-- Commence par une RÉPONSE DIRECTE à la question principale (format featured snippet)
-- Accroche personnelle qui connecte avec le lecteur
-- N'utilise PAS de H2 dans l'intro
+## MODE: SEO CLASSIC 🎯
 
-### 2. Corps de l'article (1200-1600 mots)
-- 4-5 sections avec titres H2 clairs et descriptifs
-- Sous-sections H3 quand pertinent (1-2 par H2 max)
-- Listes à puces pour les conseils pratiques
-- Paragraphes courts (3-4 phrases max)
-- Données chiffrées avec sources crédibles
+### OBJECTIF
+Créer un article parfaitement structuré pour ranker sur Google avec les featured snippets.
 
-### 3. Conclusion (80-120 mots)
-- Résumé des points clés
-- Call-to-action final encourageant
+### STRUCTURE (1500-2000 mots)
+1. **Intro (100-150 mots)** - Réponse directe à la question principale en 40-60 mots (featured snippet ready)
+2. **4-5 sections H2** - Titres descriptifs avec mot-clé principal
+3. **H3 si pertinent** - 1-2 sous-sections max par H2
+4. **Conclusion (80-100 mots)** - Résumé + CTA naturel
 
-## DONNÉES & SOURCES CRÉDIBLES
-Utilise des données fictives mais réalistes :
-- "Selon une étude interne VintDress auprès de 500 vendeurs..."
-- "Les utilisateurs de VintBoost rapportent en moyenne +45% de vues..."
-- "D'après les retours de la communauté VintPower..."
-- "Une analyse de 1000 annonces Vinted montre que..."
-Chiffres cohérents : +30% à +50% ventes, 2x à 3x plus de vues, 50% temps gagné, 80% des vendeurs top utilisent...
+### OPTIMISATION FEATURED SNIPPETS
+- Premier paragraphe de chaque section : définition ou réponse directe (40-60 mots)
+- Listes à puces pour les conseils (5-7 items max)
+- Listes numérotées pour les processus step-by-step
+- Tableaux Markdown pour les comparaisons si pertinent
 
-## OPTIMISATION AI SEARCH (CRITIQUE)
-- Paragraphes "snippet-ready" de 40-60 mots répondant à UNE question précise
-- Définitions claires en début de section
-- Listes numérotées pour les processus étape par étape
-- Format "Question implicite → Réponse directe → Développement"
-- Chaque H2 doit pouvoir être une réponse à "Comment..." ou "Pourquoi..."
+### CTA SUBTILS (2-3 max)
+- Mentionne le produit UNIQUEMENT quand il résout un problème évoqué
+- Intégration naturelle dans le texte, pas de bannière
+- Exemple : "Pour gagner du temps sur les photos, des outils comme VintDress permettent de..."
 
-## CTA FORMAT (2-3 par article)
-- Format Markdown : **[🚀 Texte d'action](https://produit.com)**
-- Placer APRÈS avoir identifié un problème que le produit résout
-- CTA sur leur propre ligne, précédé et suivi d'une ligne vide
-- Textes variés : "Essayer gratuitement", "Tester maintenant", "Découvrir", "Commencer"
-- Espacement : un CTA dans le premier tiers, un au milieu, un vers la fin
+### FAQ (6 questions)
+- Questions "People Also Ask" réalistes
+- Réponses de 50-80 mots, snippet-ready
+- Inclure des chiffres ou exemples concrets`;
 
-## FAQ ENRICHIE (5-6 questions)
-- Questions que les gens tapent vraiment sur Google
-- Commencer par des verbes d'action : "Comment", "Pourquoi", "Combien", "Est-ce que", "Quel est"
-- Réponses de 50-80 mots, directes et complètes
-- Inclure des chiffres ou exemples concrets dans les réponses
-- Format optimisé pour les featured snippets Google
+// Prompt pour le mode AI Search Ready
+const AI_SEARCH_PROMPT = `${BASE_CONTEXT}
 
-## RÈGLES IMPORTANTES
-- Ne JAMAIS inventer de fonctionnalités qui n'existent pas pour nos produits
-- Garder la cohérence avec le sujet original
-- Améliorer sans dénaturer le message initial
-- Markdown propre et bien formaté (pas de HTML)
-- Pas de phrase d'accroche cliché type "Dans cet article, nous allons..."
-- Éviter "il est important de noter", "en effet", "ainsi", "par conséquent" en excès`;
+## MODE: AI SEARCH READY 🤖
+
+### OBJECTIF
+Optimiser pour ChatGPT, Perplexity, Google SGE et les assistants IA qui citent des sources.
+
+### STRUCTURE OPTIMISÉE IA (1500-2000 mots)
+1. **Answer Box (50-60 mots)** - Réponse directe et complète dès le premier paragraphe
+2. **Définitions encadrées** - Format "**Qu'est-ce que X ?** X est..." pour chaque concept clé
+3. **Listes structurées** - Les IA adorent les formats clairs et numérotés
+4. **Exemples concrets** - Avec chiffres vérifiables
+
+### FORMAT "CITATION-READY"
+- Chaque section doit pouvoir être citée indépendamment
+- Phrases assertives et factuelles
+- Éviter les opinions, préférer les données
+- Format "Selon [source], X permet d'obtenir +Y%..."
+
+### SIGNAUX DE FRAÎCHEUR
+- Mentionner l'année en cours (2025)
+- "En 2025, les vendeurs Vinted..."
+- "Les dernières mises à jour de l'algorithme..."
+
+### CTA CONTEXTUELS (2-3)
+- Placement naturel après un problème identifié
+- Format discret : "des outils comme [Produit] aident à..."
+
+### FAQ ORIENTÉE IA (6-8 questions)
+- Questions que les gens posent à ChatGPT
+- "Comment...", "Pourquoi...", "Quel est le meilleur moyen de..."
+- Réponses directes, citables, avec données`;
+
+// Prompt pour le mode Full PBN (le plus complet)
+const FULL_PBN_PROMPT = `${BASE_CONTEXT}
+
+## MODE: FULL PBN 🚀 (STRATÉGIE COMPLÈTE)
+
+### OBJECTIF TRIPLE
+1. Ranker sur Google (SEO traditionnel)
+2. Être cité par les IA (ChatGPT, Perplexity, SGE)
+3. Construire l'autorité topique sur la niche Vinted
+
+### DÉTECTION AUTOMATIQUE DU FORMAT
+Analyse le titre et adapte le style :
+- "Comment..." → Guide pratique détaillé avec étapes numérotées
+- Chiffres (10, 5, 7...) → Liste enrichie avec exemples pour chaque point
+- "Test", "avis", "j'ai essayé" → Étude de cas avec méthodo et résultats
+- "vs", "ou", "comparatif" → Tableau comparatif + avantages/inconvénients
+
+### STRUCTURE PREMIUM (1800-2200 mots)
+
+#### 1. HOOK + ANSWER BOX (100-150 mots)
+- Accroche personnelle qui crée la connexion
+- Réponse directe en 40-60 mots (featured snippet)
+- Promesse de valeur pour la suite
+
+#### 2. CORPS ENRICHI (1400-1700 mots)
+- 5-6 sections H2 avec mots-clés LSI
+- Définitions encadrées pour les concepts clés
+- Listes à puces ET numérotées alternées
+- 1 tableau Markdown si comparaison pertinente
+- Exemples concrets avec chiffres
+
+#### 3. CONCLUSION ACTIONNABLE (100-150 mots)
+- Résumé en 3 points clés
+- CTA naturel vers l'action
+
+### SIGNAUX E-E-A-T (AUTORITÉ)
+- **Experience** : "Après avoir vendu plus de 500 articles sur Vinted..."
+- **Expertise** : Vocabulaire précis, pas d'approximations
+- **Authoritativeness** : Citer des sources (études internes, analyses)
+- **Trust** : Admettre les limites, conseils honnêtes
+
+### DONNÉES & SOURCES CRÉDIBLES
+- "D'après notre analyse de 1000 annonces Vinted en 2025..."
+- "Les utilisateurs de VintDress rapportent en moyenne +47% de ventes"
+- "Une étude interne sur 500 vendeurs montre que..."
+- Chiffres réalistes : +30% à +60% ventes, 2x-3x visibilité, 50% temps gagné
+
+### ENRICHISSEMENT SÉMANTIQUE (LSI)
+Intégrer naturellement les termes connexes :
+- vente en ligne, e-commerce, marketplace, mode circulaire
+- économie collaborative, seconde main, occasion, vintage
+- optimisation, visibilité, conversion, taux de vente
+- photos produit, mise en scène, présentation, attractivité
+
+### CTA INTELLIGENTS (3 max, bien espacés)
+Place les mentions de nos SaaS uniquement quand pertinent :
+- Problème de photos / mannequin / mise en scène → VintDress
+- Besoin de visibilité / contenu dynamique / vidéo → VintBoost
+- Descriptions / titres / prix / automatisation → VintPower
+
+Format subtil : "C'est exactement ce que propose [Produit] - [bénéfice en 1 phrase]"
+
+### FAQ PREMIUM (6-8 questions)
+Mix de questions :
+- 2-3 questions "People Also Ask" Google
+- 2-3 questions posées à ChatGPT/Perplexity
+- 1-2 questions longue traîne spécifiques
+Réponses : 60-100 mots, données concrètes, citables par les IA
+
+### RÈGLES CRITIQUES
+- JAMAIS de fonctionnalités inventées pour nos produits
+- Markdown propre (pas de HTML)
+- Éviter les clichés SEO ("Dans cet article...", "il est important de noter...")
+- Chaque paragraphe doit apporter de la valeur unique`;
+
+// Sélection du prompt selon le mode
+function getPromptForMode(mode: ImprovementMode): string {
+  switch (mode) {
+    case "seo-classic":
+      return SEO_CLASSIC_PROMPT;
+    case "ai-search":
+      return AI_SEARCH_PROMPT;
+    case "full-pbn":
+    default:
+      return FULL_PBN_PROMPT;
+  }
+}
 
 export async function improveArticle(
   existingArticle: {
@@ -118,14 +235,28 @@ export async function improveArticle(
   options: ImprovementOptions
 ): Promise<ImprovedArticle> {
   const openai = getOpenAIClient();
+  const systemPrompt = getPromptForMode(options.mode);
 
   const existingFaqFormatted = existingArticle.faq && existingArticle.faq.length > 0
     ? existingArticle.faq.map((f, i) => `${i + 1}. Q: ${f.question}\n   R: ${f.answer}`).join("\n")
     : "Aucune FAQ existante";
 
-  const userPrompt = `Améliore cet article existant en suivant TOUTES les directives du système.
+  // Détecter le type de contenu pour le prompt utilisateur
+  const title = existingArticle.title.toLowerCase();
+  let contentTypeHint = "";
+  if (title.includes("comment") || title.includes("guide") || title.includes("tutoriel")) {
+    contentTypeHint = "📝 TYPE DÉTECTÉ: Guide pratique - Structure en étapes numérotées recommandée";
+  } else if (/\d+/.test(title) || title.includes("top") || title.includes("meilleur")) {
+    contentTypeHint = "📋 TYPE DÉTECTÉ: Liste/Top X - Développe chaque point avec exemples concrets";
+  } else if (title.includes("test") || title.includes("avis") || title.includes("essayé")) {
+    contentTypeHint = "🔬 TYPE DÉTECTÉ: Étude de cas - Inclure méthodologie, résultats chiffrés, conclusion";
+  } else if (title.includes("vs") || title.includes(" ou ") || title.includes("comparatif")) {
+    contentTypeHint = "⚖️ TYPE DÉTECTÉ: Comparatif - Tableau de comparaison + avantages/inconvénients";
+  }
 
-## ARTICLE ACTUEL À AMÉLIORER
+  const userPrompt = `## ARTICLE À AMÉLIORER
+
+${contentTypeHint}
 
 **Titre actuel:** ${existingArticle.title}
 
@@ -139,38 +270,33 @@ ${existingFaqFormatted}
 
 ---
 
-## INSTRUCTIONS D'AMÉLIORATION
+## INSTRUCTIONS
 
-1. GARDE le sujet principal mais enrichis le contenu
-2. AUGMENTE la longueur à 1500-2000 mots
-3. AMÉLIORE le titre pour plus d'impact SEO (garde l'intention, améliore la formulation)
-4. RESTRUCTURE avec 4-5 sections H2 bien définies
-5. ENRICHIS la FAQ avec 5-6 questions pertinentes (garde les meilleures existantes)
-6. AJOUTE 2-3 CTA vers VintDress/VintBoost/VintPower selon le contexte
-7. INTÈGRE des données chiffrées crédibles
-8. OPTIMISE pour les featured snippets et l'AI search
+Transforme cet article en suivant TOUTES les directives du système.
+Garde le sujet principal mais enrichis massivement le contenu.
 
-Retourne UNIQUEMENT un JSON valide avec cette structure exacte (sans aucun texte avant ou après):
+Retourne UNIQUEMENT un JSON valide:
 {
-  "title": "Nouveau titre optimisé (50-65 caractères)",
-  "content": "Contenu complet amélioré en Markdown avec ## pour H2 et ### pour H3",
-  "summary": "Nouvelle meta description optimisée (150-160 caractères)",
+  "title": "Titre SEO optimisé (50-65 caractères, avec mot-clé principal)",
+  "content": "Contenu Markdown complet (## pour H2, ### pour H3, listes, tableaux si pertinent)",
+  "summary": "Meta description accrocheuse (150-160 caractères)",
   "faq": [
-    {"question": "Question 1?", "answer": "Réponse complète 1 (50-80 mots)"},
-    {"question": "Question 2?", "answer": "Réponse complète 2 (50-80 mots)"},
-    {"question": "Question 3?", "answer": "Réponse complète 3 (50-80 mots)"},
-    {"question": "Question 4?", "answer": "Réponse complète 4 (50-80 mots)"},
-    {"question": "Question 5?", "answer": "Réponse complète 5 (50-80 mots)"}
+    {"question": "Question 1?", "answer": "Réponse complète avec données (60-100 mots)"},
+    {"question": "Question 2?", "answer": "Réponse complète avec données (60-100 mots)"},
+    {"question": "Question 3?", "answer": "Réponse complète avec données (60-100 mots)"},
+    {"question": "Question 4?", "answer": "Réponse complète avec données (60-100 mots)"},
+    {"question": "Question 5?", "answer": "Réponse complète avec données (60-100 mots)"},
+    {"question": "Question 6?", "answer": "Réponse complète avec données (60-100 mots)"}
   ]
 }`;
 
   const response = await openai.chat.completions.create({
     model: options.model,
     messages: [
-      { role: "system", content: IMPROVEMENT_SYSTEM_PROMPT },
+      { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    temperature: 0.7,
+    temperature: 0.75,
     max_tokens: 4096,
     response_format: { type: "json_object" },
   });
@@ -194,7 +320,7 @@ Retourne UNIQUEMENT un JSON valide avec cette structure exacte (sans aucun texte
   }
 
   if (!parsed.content || parsed.content.length < 2000) {
-    throw new Error("Contenu trop court (minimum 1500 mots attendus)");
+    throw new Error("Contenu trop court (minimum attendu non atteint)");
   }
 
   if (!parsed.faq || parsed.faq.length < 5) {

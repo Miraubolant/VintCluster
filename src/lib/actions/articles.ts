@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { generateArticle, improveArticle, type ImprovementModel } from "@/lib/openai";
+import { generateArticle, improveArticle, type ImprovementModel, type ImprovementMode } from "@/lib/openai";
 import { generateImage, generateImagePrompt, type ImageModel } from "@/lib/replicate";
 import { generateSlug } from "@/lib/utils/slug";
 import { submitArticleToIndexNow, submitArticlesToIndexNow } from "@/lib/indexnow";
@@ -729,7 +729,8 @@ export async function bulkSubmitToIndexNow(
 // Améliorer un article avec l'IA
 export async function improveArticleWithAI(
   articleId: string,
-  model: ImprovementModel
+  model: ImprovementModel,
+  mode: ImprovementMode = "full-pbn"
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
 
@@ -753,7 +754,7 @@ export async function improveArticleWithAI(
         summary: article.summary || "",
         faq: (article.faq as { question: string; answer: string }[]) || [],
       },
-      { model }
+      { model, mode }
     );
 
     // Mettre à jour l'article (garder le même statut)
