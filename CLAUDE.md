@@ -121,6 +121,7 @@ src/app/
 │   ├── articles/            # Gestion articles générés
 │   │   └── [id]/            # Page édition article (EditArticleForm)
 │   ├── scheduler/           # Configuration publication auto
+│   ├── analytics/           # Google Search Console analytics
 │   ├── logs/                # Historique activité
 │   ├── settings/            # Paramètres
 │   ├── login/               # Authentification
@@ -258,6 +259,9 @@ src/
 │   │   └── index.ts
 │   ├── indexnow/            # Indexation rapide
 │   │   └── index.ts         # API IndexNow (Bing, Yandex, etc.)
+│   ├── google/              # Google APIs
+│   │   ├── search-console.ts # Client Search Console API
+│   │   └── index.ts         # Exports
 │   └── validations/         # Schemas Zod
 │       └── index.ts
 ├── hooks/                   # React hooks custom
@@ -334,6 +338,14 @@ interface ImageOptions {
 - `uploadBuffer(buffer, siteId, filename, contentType?)` - Upload un buffer (favicon généré)
 - `deleteImageFromStorage(imageUrl)` - Supprime une image du storage
 
+### Analytics (`lib/actions/analytics.ts`)
+- `getAnalytics(period)` - Récupère les métriques Search Console pour tous les sites
+- `getSiteAnalytics(siteId, period)` - Métriques pour un site spécifique
+- `getAccessibleSearchConsoleSites()` - Liste les sites accessibles via l'API
+- `getCredentialsStatus()` - Vérifie si les credentials Google sont configurées
+
+Périodes supportées : `"7d"` | `"28d"` | `"3m"`
+
 ## Variables d'Environnement
 
 ```env
@@ -357,6 +369,12 @@ REVALIDATION_SECRET=xxx  # Pour /api/revalidate
 
 # IndexNow (Bing, Yandex, Seznam, Naver)
 INDEXNOW_API_KEY=xxx  # Clé pour indexation rapide
+
+# Google Search Console (Service Account)
+GOOGLE_SERVICE_ACCOUNT_JSON=xxx  # JSON complet encodé en Base64 (RECOMMANDÉ)
+# OU séparément :
+GOOGLE_SERVICE_ACCOUNT_EMAIL=xxx@xxx.iam.gserviceaccount.com
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
 ## API Routes
@@ -556,6 +574,44 @@ generateSiteSEO(siteName: string, siteId?: string)
 | `/` (home) | ✅ | `/` | website, siteName, locale, images | summary | - |
 | `/blog` | ✅ | `/blog` | website, siteName, locale, images | summary | - |
 | `/blog/[slug]` | ✅ | `/blog/[slug]` | article, publishedTime, modifiedTime, images | summary_large_image | Article, FAQPage, BreadcrumbList |
+
+## Google Search Console
+
+### Intégration Analytics
+
+Page `/admin/analytics` affichant les métriques Search Console pour tous les sites :
+- **Métriques globales** : Clics, Impressions, CTR moyen, Position moyenne
+- **Par site** : Top queries, Top pages, métriques individuelles
+- **Périodes** : 7 jours, 28 jours, 3 mois
+
+### Configuration Service Account
+
+1. **Créer un Service Account** dans Google Cloud Console
+2. **Activer l'API Search Console** (Google Search Console API)
+3. **Générer une clé JSON** pour le service account
+4. **Encoder en Base64** : `[Convert]::ToBase64String([System.IO.File]::ReadAllBytes("key.json"))`
+5. **Ajouter la variable** `GOOGLE_SERVICE_ACCOUNT_JSON` dans Coolify
+6. **Donner accès** au service account dans chaque propriété Search Console
+
+### Permissions Search Console
+
+Pour chaque propriété dans Search Console :
+1. Paramètres → Utilisateurs et autorisations
+2. Ajouter utilisateur → Email du service account
+3. Permission : "Lecture seule"
+
+### Format siteUrl
+
+L'API utilise le format `sc-domain:example.com` pour les propriétés de domaine.
+Les domaines sont automatiquement nettoyés (suppression de `https://`, `www.`, `/`).
+
+### Fichiers concernés
+
+```
+src/lib/google/search-console.ts  # Client API Google
+src/lib/actions/analytics.ts      # Server actions
+src/app/admin/(dashboard)/analytics/page.tsx  # Page UI
+```
 
 ## Notes Importantes
 
