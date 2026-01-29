@@ -29,3 +29,7 @@ export interface FAQItem {
   question: string;
   answer: string;
 }
+
+// Types pour l'amélioration IA (scheduler)
+export type SchedulerImprovementModel = "gpt-4o" | "gpt-4o-mini" | "gpt-4-turbo";
+export type SchedulerImprovementMode = "seo-classic" | "ai-search" | "full-pbn";

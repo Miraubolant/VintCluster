@@ -193,7 +193,12 @@ export default function SchedulerPage() {
         const result = await generateSingleBulkArticle(
           task.siteId,
           task.keywordIds,
-          task.autoPublish
+          task.autoPublish,
+          task.enableImprovement ? {
+            enableImprovement: task.enableImprovement,
+            improvementModel: task.improvementModel,
+            improvementMode: task.improvementMode,
+          } : undefined
         );
 
         // Check if cancelled after generation

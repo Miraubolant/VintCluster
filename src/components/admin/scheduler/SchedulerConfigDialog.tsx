@@ -21,8 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { upsertSchedulerConfig, getAvailableKeywordsForScheduler } from "@/lib/actions/scheduler";
+import { IMPROVEMENT_MODELS, IMPROVEMENT_MODES, type ImprovementModel, type ImprovementMode } from "@/lib/openai";
 import { toast } from "sonner";
-import { ImageIcon, Search, Tag } from "lucide-react";
+import { ImageIcon, Search, Tag, Sparkles } from "lucide-react";
 import type { Site, SchedulerConfig } from "@/types/database";
 
 interface SchedulerConfigWithSite extends SchedulerConfig {
@@ -81,6 +82,10 @@ export function SchedulerConfigDialog({
   const [availableKeywords, setAvailableKeywords] = useState<AvailableKeyword[]>([]);
   const [keywordSearch, setKeywordSearch] = useState("");
   const [loadingKeywords, setLoadingKeywords] = useState(false);
+  // Options d'amélioration IA
+  const [enableImprovement, setEnableImprovement] = useState(false);
+  const [improvementModel, setImprovementModel] = useState<ImprovementModel>("gpt-4o");
+  const [improvementMode, setImprovementMode] = useState<ImprovementMode>("full-pbn");
 
   // Charger les keywords disponibles quand le site change
   useEffect(() => {
@@ -109,6 +114,10 @@ export function SchedulerConfigDialog({
       setDaysOfWeek((config.days_of_week as number[]) || [1, 2, 3, 4, 5]);
       setPublishHours((config.publish_hours as number[]) || [9, 14]);
       setSelectedKeywordIds((config.keyword_ids as string[]) || []);
+      // Options d'amélioration IA
+      setEnableImprovement((config as unknown as { enable_improvement?: boolean }).enable_improvement || false);
+      setImprovementModel(((config as unknown as { improvement_model?: string }).improvement_model as ImprovementModel) || "gpt-4o");
+      setImprovementMode(((config as unknown as { improvement_mode?: string }).improvement_mode as ImprovementMode) || "full-pbn");
     } else {
       setSelectedSiteId("");
       setEnabled(true);
@@ -118,6 +127,9 @@ export function SchedulerConfigDialog({
       setDaysOfWeek([1, 2, 3, 4, 5]);
       setPublishHours([9, 14]);
       setSelectedKeywordIds([]);
+      setEnableImprovement(false);
+      setImprovementModel("gpt-4o");
+      setImprovementMode("full-pbn");
     }
     setKeywordSearch("");
   }, [config, open]);
@@ -178,6 +190,9 @@ export function SchedulerConfigDialog({
       days_of_week: daysOfWeek,
       publish_hours: publishHours,
       keyword_ids: selectedKeywordIds,
+      enable_improvement: enableImprovement,
+      improvement_model: improvementModel,
+      improvement_mode: improvementMode,
     });
 
     setLoading(false);
@@ -257,6 +272,67 @@ export function SchedulerConfigDialog({
               </p>
             </div>
             <Switch checked={autoPublish} onCheckedChange={setAutoPublish} />
+          </div>
+
+          {/* Section Amélioration IA */}
+          <div className="border-t pt-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <div>
+                  <Label>Amélioration IA automatique</Label>
+                  <p className="text-sm text-gray-500">
+                    Améliorer chaque article après génération (SEO, longueur, liens)
+                  </p>
+                </div>
+              </div>
+              <Switch checked={enableImprovement} onCheckedChange={setEnableImprovement} />
+            </div>
+
+            {enableImprovement && (
+              <div className="grid grid-cols-2 gap-4 pl-6 border-l-2 border-amber-200">
+                <div className="space-y-2">
+                  <Label>Modèle IA</Label>
+                  <Select value={improvementModel} onValueChange={(v) => setImprovementModel(v as ImprovementModel)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(IMPROVEMENT_MODELS).map(([key, model]) => (
+                        <SelectItem key={key} value={key}>
+                          <div className="flex flex-col">
+                            <span>{model.name}</span>
+                            <span className="text-xs text-gray-500">{model.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Mode d&apos;amélioration</Label>
+                  <Select value={improvementMode} onValueChange={(v) => setImprovementMode(v as ImprovementMode)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(IMPROVEMENT_MODES).map(([key, mode]) => (
+                        <SelectItem key={key} value={key}>
+                          <div className="flex items-center gap-2">
+                            <span>{mode.icon}</span>
+                            <div className="flex flex-col">
+                              <span>{mode.name}</span>
+                              <span className="text-xs text-gray-500">{mode.description}</span>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

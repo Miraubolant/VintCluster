@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { generateArticle } from "@/lib/openai";
+import { generateArticle, improveArticle, type ImprovementModel, type ImprovementMode } from "@/lib/openai";
 import { generateImage, generateImagePrompt } from "@/lib/replicate";
 import type { SchedulerConfig, Json } from "@/types/database";
 
@@ -61,6 +61,9 @@ export async function upsertSchedulerConfig(
     days_of_week: number[];
     publish_hours: number[];
     keyword_ids: string[];
+    enable_improvement?: boolean;
+    improvement_model?: string;
+    improvement_mode?: string;
   }
 ): Promise<{ data?: SchedulerConfig; error?: string }> {
   const supabase = await createClient();
@@ -86,6 +89,9 @@ export async function upsertSchedulerConfig(
         days_of_week: config.days_of_week,
         publish_hours: config.publish_hours,
         keyword_ids: config.keyword_ids,
+        enable_improvement: config.enable_improvement ?? false,
+        improvement_model: config.improvement_model ?? "gpt-4o",
+        improvement_mode: config.improvement_mode ?? "full-pbn",
         updated_at: new Date().toISOString(),
       })
       .eq("site_id", siteId)
@@ -104,6 +110,9 @@ export async function upsertSchedulerConfig(
         days_of_week: config.days_of_week,
         publish_hours: config.publish_hours,
         keyword_ids: config.keyword_ids,
+        enable_improvement: config.enable_improvement ?? false,
+        improvement_model: config.improvement_model ?? "gpt-4o",
+        improvement_mode: config.improvement_mode ?? "full-pbn",
       })
       .select()
       .single();
@@ -338,12 +347,24 @@ export async function runSchedulerManually(
   }
 }
 
+// Interface pour les tâches de génération en masse
+export interface BulkGenerationTask {
+  siteId: string;
+  siteName: string;
+  keywordIds: string[];
+  autoPublish: boolean;
+  count: number;
+  enableImprovement: boolean;
+  improvementModel: string;
+  improvementMode: string;
+}
+
 // Préparer les données pour la génération en masse
 export async function prepareBulkGeneration(
   siteIds: string[],
   totalArticles: number
 ): Promise<{
-  tasks: Array<{ siteId: string; siteName: string; keywordIds: string[]; autoPublish: boolean; count: number }>;
+  tasks: BulkGenerationTask[];
   errors: string[];
 }> {
   if (siteIds.length === 0 || totalArticles <= 0) {
@@ -354,7 +375,7 @@ export async function prepareBulkGeneration(
   const articlesPerConfig = Math.floor(totalArticles / siteIds.length);
   const remainder = totalArticles % siteIds.length;
 
-  const tasks: Array<{ siteId: string; siteName: string; keywordIds: string[]; autoPublish: boolean; count: number }> = [];
+  const tasks: BulkGenerationTask[] = [];
   const errors: string[] = [];
 
   for (let i = 0; i < siteIds.length; i++) {
@@ -386,21 +407,33 @@ export async function prepareBulkGeneration(
       keywordIds,
       autoPublish: config.auto_publish || false,
       count: articlesToGenerate,
+      enableImprovement: (config as unknown as { enable_improvement?: boolean }).enable_improvement || false,
+      improvementModel: ((config as unknown as { improvement_model?: string }).improvement_model) || "gpt-4o",
+      improvementMode: ((config as unknown as { improvement_mode?: string }).improvement_mode) || "full-pbn",
     });
   }
 
   return { tasks, errors };
 }
 
+// Options d'amélioration pour la génération en masse
+export interface BulkImprovementOptions {
+  enableImprovement: boolean;
+  improvementModel: string;
+  improvementMode: string;
+}
+
 // Générer un seul article pour la génération en masse
 export async function generateSingleBulkArticle(
   siteId: string,
   keywordIds: string[],
-  autoPublish: boolean
+  autoPublish: boolean,
+  improvementOptions?: BulkImprovementOptions
 ): Promise<{
   success: boolean;
   title?: string;
   error?: string;
+  improved?: boolean;
 }> {
   const supabase = await createClient();
 
@@ -427,7 +460,38 @@ export async function generateSingleBulkArticle(
   try {
     // Générer l'article
     const cluster = keyword.cluster || keyword.site_key || undefined;
-    const generated = await generateArticle(keyword.keyword, cluster);
+    let generated = await generateArticle(keyword.keyword, cluster);
+    let wasImproved = false;
+
+    // Améliorer l'article si l'option est activée
+    if (improvementOptions?.enableImprovement) {
+      try {
+        const improved = await improveArticle(
+          {
+            title: generated.title,
+            content: generated.content,
+            summary: generated.summary,
+            faq: generated.faq,
+          },
+          {
+            model: improvementOptions.improvementModel as ImprovementModel,
+            mode: improvementOptions.improvementMode as ImprovementMode,
+          }
+        );
+        // Remplacer par la version améliorée
+        generated = {
+          ...generated,
+          title: improved.title,
+          content: improved.content,
+          summary: improved.summary,
+          faq: improved.faq,
+        };
+        wasImproved = true;
+      } catch (improveError) {
+        // Continue avec l'article non amélioré si l'amélioration échoue
+        console.error("Amélioration IA échouée:", improveError);
+      }
+    }
 
     // Générer l'image
     let imageUrl: string | null = null;
@@ -475,7 +539,7 @@ export async function generateSingleBulkArticle(
       .update({ status: autoPublish ? "published" : "generated" })
       .eq("id", keyword.id);
 
-    return { success: true, title: generated.title };
+    return { success: true, title: generated.title, improved: wasImproved };
   } catch (error) {
     await supabase
       .from("keywords")
