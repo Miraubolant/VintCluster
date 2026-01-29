@@ -32,52 +32,72 @@ export interface SearchConsoleResponse {
   error?: string;
 }
 
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+
 // Vérifier si les credentials sont configurées
 function hasCredentials(): boolean {
   return !!(
-    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
-    process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+    // Option 1: JSON complet en Base64
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON ||
+    // Option 2: Email + Clé séparés
+    (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
+      process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY)
   );
 }
 
-// Formater la clé privée (gère tous les formats possibles)
-function formatPrivateKey(key: string | undefined): string {
-  if (!key) return "";
+// Créer un fichier temporaire avec les credentials JSON
+function createTempCredentialsFile(): string | null {
+  const tempDir = os.tmpdir();
+  const tempFile = path.join(tempDir, `gsc-credentials-${Date.now()}.json`);
 
-  let formattedKey = key.trim();
-
-  // Nettoyer les guillemets potentiels au début/fin
-  formattedKey = formattedKey.replace(/^["']|["']$/g, "");
-
-  // Cas 0: Clé encodée en Base64 (recommandé pour éviter les problèmes de newline)
-  // Si la clé ne commence pas par "-----BEGIN", c'est probablement du Base64
-  if (!formattedKey.includes("-----BEGIN")) {
+  // Option 1: JSON complet en Base64 (RECOMMANDÉ)
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     try {
-      formattedKey = Buffer.from(formattedKey, "base64").toString("utf-8");
-    } catch {
-      console.error("Failed to decode Base64 key");
+      const jsonContent = Buffer.from(
+        process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+        "base64"
+      ).toString("utf-8");
+      fs.writeFileSync(tempFile, jsonContent);
+      return tempFile;
+    } catch (error) {
+      console.error("Failed to decode GOOGLE_SERVICE_ACCOUNT_JSON:", error);
+      return null;
     }
   }
 
-  // Cas 1: La clé contient des séquences \n littérales (backslash + n comme 2 caractères)
-  if (formattedKey.includes("\\n")) {
-    formattedKey = formattedKey.split("\\n").join("\n");
+  // Option 2: Construire le JSON à partir des variables séparées
+  if (
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
+    process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+  ) {
+    try {
+      let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.trim();
+
+      // Nettoyer les guillemets
+      privateKey = privateKey.replace(/^["']|["']$/g, "");
+
+      // Gérer les différents formats de newline
+      if (privateKey.includes("\\n")) {
+        privateKey = privateKey.split("\\n").join("\n");
+      }
+
+      const credentials = {
+        type: "service_account",
+        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        private_key: privateKey,
+      };
+
+      fs.writeFileSync(tempFile, JSON.stringify(credentials));
+      return tempFile;
+    } catch (error) {
+      console.error("Failed to create credentials file:", error);
+      return null;
+    }
   }
 
-  // Cas 2: La clé pourrait avoir des \\n échappés deux fois
-  if (formattedKey.includes("\\\\n")) {
-    formattedKey = formattedKey.split("\\\\n").join("\n");
-  }
-
-  // Cas 3: Vérifier si la clé a déjà des vrais sauts de ligne (Coolify multiline)
-  // Dans ce cas, on ne fait rien de plus
-
-  // S'assurer que la clé a le bon format
-  if (!formattedKey.includes("-----BEGIN PRIVATE KEY-----")) {
-    console.error("Invalid private key format. Key starts with:", formattedKey.substring(0, 50));
-  }
-
-  return formattedKey;
+  return null;
 }
 
 // Créer le client authentifié
@@ -86,17 +106,40 @@ async function getSearchConsoleClient() {
     throw new Error("Google Search Console credentials not configured");
   }
 
-  const privateKey = formatPrivateKey(process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY);
+  const keyFile = createTempCredentialsFile();
 
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: privateKey,
-    },
-    scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
-  });
+  if (!keyFile) {
+    throw new Error("Failed to create credentials file");
+  }
 
-  return google.searchconsole({ version: "v1", auth });
+  try {
+    const auth = new google.auth.GoogleAuth({
+      keyFile,
+      scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
+    });
+
+    const client = google.searchconsole({ version: "v1", auth });
+
+    // Nettoyer le fichier temporaire après création du client
+    // Note: Le fichier est lu de manière synchrone par GoogleAuth
+    setTimeout(() => {
+      try {
+        fs.unlinkSync(keyFile);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }, 1000);
+
+    return client;
+  } catch (error) {
+    // Nettoyer en cas d'erreur
+    try {
+      fs.unlinkSync(keyFile);
+    } catch {
+      // Ignore cleanup errors
+    }
+    throw error;
+  }
 }
 
 // Formater le domaine pour l'API Search Console
