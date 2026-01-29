@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Settings, ChevronDown, ChevronUp, ImageIcon, Tag, Play, Loader2 } from "lucide-react";
+import { Settings, ChevronDown, ChevronUp, ImageIcon, Tag, Play, Loader2, FileText } from "lucide-react";
 import type { SchedulerConfig } from "@/types/database";
 
 interface SchedulerConfigWithSite extends SchedulerConfig {
@@ -14,6 +14,7 @@ interface SchedulerConfigWithSite extends SchedulerConfig {
     name: string;
     domain: string;
   };
+  articlesCount?: number;
 }
 
 interface SchedulerConfigCardProps {
@@ -71,6 +72,12 @@ export function SchedulerConfigCard({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Article count badge */}
+          <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 gap-1">
+            <FileText className="h-3 w-3" />
+            {config.articlesCount ?? 0}
+          </Badge>
+
           {config.enabled ? (
             <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
               Actif

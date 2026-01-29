@@ -30,6 +30,7 @@ interface SchedulerConfigWithSite extends SchedulerConfig {
     name: string;
     domain: string;
   };
+  articlesCount?: number;
 }
 
 export default function SchedulerPage() {

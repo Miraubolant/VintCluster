@@ -12,6 +12,7 @@ interface SchedulerConfigWithSite extends SchedulerConfig {
     name: string;
     domain: string;
   };
+  articlesCount?: number;
 }
 
 export async function getSchedulerConfigs(): Promise<{
@@ -20,6 +21,7 @@ export async function getSchedulerConfigs(): Promise<{
 }> {
   const supabase = await createClient();
 
+  // Get configs with site info
   const { data, error } = await supabase
     .from("scheduler_config")
     .select("*, site:sites(id, name, domain)")
@@ -27,6 +29,29 @@ export async function getSchedulerConfigs(): Promise<{
 
   if (error) {
     return { error: error.message, data: [] };
+  }
+
+  // Get article counts for all sites
+  const siteIds = data?.map(c => c.site_id) || [];
+  if (siteIds.length > 0) {
+    const { data: articlesData } = await supabase
+      .from("articles")
+      .select("site_id")
+      .in("site_id", siteIds);
+
+    // Count articles per site
+    const articleCounts: Record<string, number> = {};
+    articlesData?.forEach(article => {
+      articleCounts[article.site_id] = (articleCounts[article.site_id] || 0) + 1;
+    });
+
+    // Add counts to configs
+    const configsWithCounts = data?.map(config => ({
+      ...config,
+      articlesCount: articleCounts[config.site_id] || 0,
+    })) || [];
+
+    return { data: configsWithCounts as SchedulerConfigWithSite[] };
   }
 
   return { data: (data as SchedulerConfigWithSite[]) || [] };
