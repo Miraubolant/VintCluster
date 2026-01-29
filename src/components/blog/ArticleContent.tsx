@@ -196,14 +196,14 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
       {/* Content */}
       <div className="prose prose-lg max-w-none
         prose-headings:font-black prose-headings:uppercase prose-headings:text-black prose-headings:tracking-tight
-        prose-h2:text-3xl prose-h2:mt-16 prose-h2:mb-6 prose-h2:relative prose-h2:pl-6 prose-h2:scroll-mt-24
-        prose-h3:text-2xl prose-h3:mt-12 prose-h3:mb-4 prose-h3:scroll-mt-24
-        prose-p:text-gray-800 prose-p:leading-relaxed
+        prose-h2:text-3xl prose-h2:mt-20 prose-h2:mb-8 prose-h2:relative prose-h2:pl-6 prose-h2:scroll-mt-24
+        prose-h3:text-2xl prose-h3:mt-14 prose-h3:mb-6 prose-h3:scroll-mt-24
+        prose-p:text-gray-800 prose-p:leading-[1.9] prose-p:mb-6
         prose-a:text-black prose-a:font-bold prose-a:no-underline
         prose-strong:text-black prose-strong:font-black
-        prose-blockquote:border-l-0 prose-blockquote:bg-gray-100 prose-blockquote:py-6 prose-blockquote:px-8 prose-blockquote:not-italic prose-blockquote:relative prose-blockquote:my-8
-        prose-ul:my-6 prose-ol:my-6
-        prose-li:text-gray-800
+        prose-blockquote:border-l-0 prose-blockquote:bg-gray-100 prose-blockquote:py-8 prose-blockquote:px-10 prose-blockquote:not-italic prose-blockquote:relative prose-blockquote:my-12
+        prose-ul:my-10 prose-ul:space-y-3 prose-ol:my-10 prose-ol:space-y-3
+        prose-li:text-gray-800 prose-li:leading-[1.8] prose-li:mb-2
         prose-img:border-[4px] prose-img:border-black prose-img:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]
       ">
         <ReactMarkdown
@@ -306,7 +306,7 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
           </div>
 
           {/* FAQ items - first one open by default */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {article.faq.map((item, index) => (
               <details
                 key={index}
@@ -329,7 +329,7 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
                   <ChevronDown className="w-6 h-6 shrink-0 transition-transform group-open:rotate-180" />
                 </summary>
                 <div
-                  className="p-5 border-t-[4px] border-black"
+                  className="p-6 border-t-[4px] border-black"
                   style={{ backgroundColor: primaryColor + "15" }}
                 >
                   <div className="flex gap-4">
@@ -337,7 +337,7 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
                       className="w-1 shrink-0"
                       style={{ backgroundColor: primaryColor }}
                     />
-                    <p className="text-gray-800 leading-relaxed text-base">{item.answer}</p>
+                    <p className="text-gray-800 leading-[1.85] text-base">{item.answer}</p>
                   </div>
                 </div>
               </details>
