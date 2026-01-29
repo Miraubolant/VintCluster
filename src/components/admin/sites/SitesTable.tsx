@@ -172,57 +172,58 @@ export function SitesTable({ sites }: SitesTableProps) {
 
   return (
     <>
-      {/* Bulk Actions Bar */}
+      {/* Barre d'actions groupées */}
       {selectedIds.length > 0 && !progress.isRunning && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-indigo-700">
-              {selectedIds.length} site{selectedIds.length > 1 ? "s" : ""} sélectionné{selectedIds.length > 1 ? "s" : ""}
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="font-medium text-indigo-900">
+              {selectedIds.length} site(s) sélectionné(s)
             </span>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => setSelectedIds([])}
-              className="text-gray-600"
+              className="text-indigo-600 hover:text-indigo-800"
             >
+              <X className="h-4 w-4 mr-1" />
               Désélectionner
             </Button>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2">
             {/* Template selector */}
-            <div className="flex items-center gap-2">
-              <Select
-                value={selectedTemplate}
-                onValueChange={(value) => setSelectedTemplate(value as SiteTemplate)}
-              >
-                <SelectTrigger className="w-[160px] h-9 text-sm">
-                  <SelectValue placeholder="Template" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(TEMPLATES).map(([key, template]) => (
-                    <SelectItem key={key} value={key}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBulkUpdateTemplate}
-                disabled={updatingTemplate}
-                className="text-purple-700 border-purple-300 hover:bg-purple-100"
-              >
-                <Palette className="h-4 w-4 mr-1" />
-                {updatingTemplate ? "..." : "Appliquer"}
-              </Button>
-            </div>
-            <div className="w-px h-6 bg-indigo-200" />
+            <Select
+              value={selectedTemplate}
+              onValueChange={(value) => setSelectedTemplate(value as SiteTemplate)}
+            >
+              <SelectTrigger className="w-[140px] h-9 text-sm bg-white">
+                <SelectValue placeholder="Template" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(TEMPLATES).map(([key, template]) => (
+                  <SelectItem key={key} value={key}>
+                    {template.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkUpdateTemplate}
+              disabled={updatingTemplate || progress.isRunning}
+              className="text-purple-700 border-purple-300 hover:bg-purple-50"
+            >
+              <Palette className="h-4 w-4 mr-1" />
+              {updatingTemplate ? "Application..." : "Appliquer template"}
+            </Button>
+            <div className="w-px h-6 bg-gray-300 mx-1" />
             <Button
               variant="outline"
               size="sm"
               onClick={handleBulkGenerateSEO}
-              className="text-indigo-700 border-indigo-300 hover:bg-indigo-100"
+              disabled={progress.isRunning}
+              className="text-indigo-700 border-indigo-300 hover:bg-indigo-50"
             >
               <Sparkles className="h-4 w-4 mr-1" />
               Générer SEO
