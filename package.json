@@ -27,6 +27,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.93.1",
     "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.90.20",
     "autoprefixer": "^10.4.23",
     "class-variance-authority": "^0.7.1",

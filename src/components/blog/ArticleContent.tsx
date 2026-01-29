@@ -213,7 +213,10 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
               const text = children?.toString() || "";
               const id = generateHeadingId(text);
               return (
-                <h2 id={id} className="relative pl-6">
+                <h2
+                  id={id}
+                  className="relative pl-6 text-3xl md:text-4xl lg:text-5xl font-black uppercase text-black tracking-tight mt-16 mb-8 scroll-mt-24"
+                >
                   <span
                     className="absolute left-0 top-1 bottom-1 w-2"
                     style={{ backgroundColor: primaryColor }}
@@ -227,7 +230,10 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
               const text = children?.toString() || "";
               const id = generateHeadingId(text);
               return (
-                <h3 id={id}>
+                <h3
+                  id={id}
+                  className="text-xl md:text-2xl lg:text-3xl font-black uppercase text-black tracking-tight mt-12 mb-6 scroll-mt-24"
+                >
                   {children}
                 </h3>
               );
