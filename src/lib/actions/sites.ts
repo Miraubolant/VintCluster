@@ -197,52 +197,48 @@ export async function getSitesWithStats(): Promise<{ data: SiteWithStats[]; erro
 // Generate SEO metadata using AI
 export async function generateSiteSEO(
   siteName: string,
-  siteId?: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _siteId?: string
 ): Promise<{ meta_title: string; meta_description: string } | { error: string }> {
   try {
     const openai = getOpenAIClient();
-
-    // If siteId provided, get associated keywords for better context
-    let keywords: string[] = [];
-    if (siteId) {
-      const supabase = await createClient();
-      const { data } = await supabase
-        .from("keywords")
-        .select("keyword")
-        .eq("site_id", siteId)
-        .limit(10);
-
-      if (data) {
-        keywords = data.map((k) => k.keyword);
-      }
-    }
-
-    const keywordsContext = keywords.length > 0
-      ? `\n\nMots-clés associés au site: ${keywords.join(", ")}`
-      : "";
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `Tu es un expert SEO. Génère un titre SEO et une méta-description pour un site web.
+          content: `Tu es un expert SEO spécialisé dans les blogs sur Vinted et la seconde main.
 
-Règles:
-- Titre SEO: 50-60 caractères max, accrocheur, avec le nom du site
-- Description: 150-160 caractères max, incitative, avec appel à l'action
-- Ton professionnel mais engageant
-- Intègre les mots-clés naturellement si fournis
+## CONTEXTE
+Chaque site est un blog français qui parle de :
+- La vente sur Vinted
+- La mode seconde main
+- Les astuces pour mieux vendre
+- Les outils IA qui aident les vendeurs (photos, vidéos, descriptions optimisées)
 
-Réponds UNIQUEMENT en JSON valide avec ce format:
+## RÈGLES STRICTES
+- Titre SEO: 50-60 caractères max, accrocheur, DOIT contenir le nom du site
+- Description: 150-160 caractères max, conviviale et engageante
+- Ton amical, comme un blog perso qui partage ses bons plans
+- Mentionne subtilement qu'on propose des outils/astuces IA pour vendre mieux
+- CHAQUE génération doit être UNIQUE et DIFFÉRENTE des précédentes
+- Utilise des formulations variées à chaque fois
+- Évite les clichés SEO ("découvrez", "bienvenue sur")
+
+## EXEMPLES DE VARIATIONS
+Titres: "[Nom] - Tes astuces Vinted", "[Nom] | Blog mode seconde main", "[Nom] : Vends mieux sur Vinted"
+Descriptions: phrases courtes, tutoiement, emojis possibles (1-2 max), call-to-action naturel
+
+Réponds UNIQUEMENT en JSON valide:
 {"meta_title": "...", "meta_description": "..."}`
         },
         {
           role: "user",
-          content: `Nom du site: ${siteName}${keywordsContext}`
+          content: `Génère un titre SEO et une description UNIQUES pour ce blog: ${siteName}`
         }
       ],
-      temperature: 0.7,
+      temperature: 0.9,
       max_tokens: 200,
     });
 
