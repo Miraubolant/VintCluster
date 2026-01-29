@@ -20,16 +20,18 @@ export interface ImprovementOptions {
 }
 
 // Configuration des modèles disponibles
-export const IMPROVEMENT_MODELS: Record<ImprovementModel, { name: string; description: string; speed: string }> = {
+export const IMPROVEMENT_MODELS: Record<ImprovementModel, { name: string; description: string; speed: string; maxWords: string }> = {
   "gpt-4o": {
-    name: "GPT-4o",
-    description: "Le plus rapide, excellent rapport qualité/vitesse",
+    name: "GPT-4o (Recommandé)",
+    description: "Le plus rapide, articles longs (2500+ mots)",
     speed: "~15s/article",
+    maxWords: "2500-3000",
   },
   "gpt-4-turbo": {
     name: "GPT-4 Turbo",
-    description: "Plus de créativité, meilleure qualité d'écriture",
+    description: "Plus créatif mais limité (~1500 mots max)",
     speed: "~25s/article",
+    maxWords: "1000-1500",
   },
 };
 
@@ -71,7 +73,22 @@ Tu travailles pour un réseau de blogs (PBN) qui promeut subtilement 3 produits 
 ## VOCABULAIRE VINTED (à utiliser naturellement)
 vestiaire, boost, mise en avant, algorithme, photos, annonces, descriptions, négociation,
 Mondial Relay, Vinted Pro, évaluation, followers, favoris, offres, bundle, lot, acheteur,
-vendeur top, relisting, visibilité, prix de réserve`;
+vendeur top, relisting, visibilité, prix de réserve
+
+## LIENS HYPERTEXTE OBLIGATOIRES (2-3 par article)
+Intègre NATURELLEMENT des liens vers nos produits dans le texte.
+Format Markdown: [texte du lien](https://url.com)
+
+Exemples d'intégration naturelle :
+- "Pour ça, des outils comme [VintDress](https://vintdress.com) génèrent des photos portées en quelques secondes."
+- "Tu peux utiliser [VintPower](https://vintpower.com) pour optimiser tes titres et descriptions automatiquement."
+- "Avec [VintBoost](https://vintboost.com), tu crées des vidéos pro de ton vestiaire sans montage."
+
+RÈGLES:
+- 2-3 liens maximum par article (pas plus)
+- Liens intégrés naturellement dans des phrases, PAS en fin de paragraphe
+- Choisir le(s) produit(s) le(s) plus pertinent(s) selon le sujet
+- Photo/mannequin → VintDress | Vidéo/contenu dynamique → VintBoost | Titre/description/prix → VintPower`;
 
 // Prompt pour le mode SEO Classic
 const SEO_CLASSIC_PROMPT = `${BASE_CONTEXT}
@@ -291,6 +308,9 @@ Retourne UNIQUEMENT un JSON valide:
   ]
 }`;
 
+  // max_tokens selon le modèle (GPT-4o: 16k, GPT-4-turbo: 4k)
+  const maxTokens = options.model === "gpt-4o" ? 8192 : 4096;
+
   const response = await openai.chat.completions.create({
     model: options.model,
     messages: [
@@ -298,7 +318,7 @@ Retourne UNIQUEMENT un JSON valide:
       { role: "user", content: userPrompt },
     ],
     temperature: 0.75,
-    max_tokens: 8192, // Augmenté pour permettre 2500-3000 mots
+    max_tokens: maxTokens,
     response_format: { type: "json_object" },
   });
 
@@ -323,8 +343,11 @@ Retourne UNIQUEMENT un JSON valide:
   // Compter les mots (pas les caractères)
   const wordCount = parsed.content ? parsed.content.split(/\s+/).filter(w => w.length > 0).length : 0;
 
-  if (!parsed.content || wordCount < 1500) {
-    throw new Error(`Contenu trop court: ${wordCount} mots (minimum 1500 mots attendus)`);
+  // Minimum selon le modèle (GPT-4o peut faire plus long que GPT-4-turbo)
+  const minWords = options.model === "gpt-4o" ? 1500 : 800;
+
+  if (!parsed.content || wordCount < minWords) {
+    throw new Error(`Contenu trop court: ${wordCount} mots (minimum ${minWords} mots attendus pour ${options.model})`);
   }
 
   // Use existing FAQ if new one is insufficient
