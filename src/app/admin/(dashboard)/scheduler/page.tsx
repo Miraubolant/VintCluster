@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Plus, RefreshCw, CheckSquare, X, Rocket, Loader2 } from "lucide-react";
 import {
   SchedulerStats,
   SchedulerConfigCard,
   SchedulerConfigDialog,
+  BulkGenerationDialog,
+  type BulkGenerationConfig,
 } from "@/components/admin/scheduler";
 import { useBulkProgress } from "@/contexts/BulkProgressContext";
 import {
@@ -15,7 +16,7 @@ import {
   getSchedulerStats,
   toggleSchedulerEnabled,
   runSchedulerManually,
-  prepareBulkGeneration,
+  prepareBulkGenerationWithOptions,
   generateSingleBulkArticle,
   finalizeBulkGeneration,
 } from "@/lib/actions/scheduler";
@@ -50,6 +51,7 @@ export default function SchedulerPage() {
   const [selectedSiteIds, setSelectedSiteIds] = useState<Set<string>>(new Set());
   const [bulkArticleCount, setBulkArticleCount] = useState(4);
   const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
   // Use context for progress tracking (persists across pages)
   const { progress, setProgress, isCancelled } = useBulkProgress();
@@ -144,18 +146,31 @@ export default function SchedulerPage() {
     setSelectionMode(!selectionMode);
   }
 
-  async function handleBulkGeneration() {
-    if (selectedSiteIds.size === 0 || bulkArticleCount <= 0) return;
+  function handleOpenBulkDialog() {
+    if (selectedSiteIds.size === 0) return;
+    setBulkDialogOpen(true);
+  }
 
+  async function handleBulkGeneration(config: BulkGenerationConfig) {
+    setBulkDialogOpen(false);
     setBulkGenerating(true);
     setSelectionMode(false);
+    const siteIdsToProcess = Array.from(selectedSiteIds);
     setSelectedSiteIds(new Set());
     cancelledRef.current = false;
 
-    // Préparer les tâches
-    const { tasks, errors: prepErrors } = await prepareBulkGeneration(
-      Array.from(selectedSiteIds),
-      bulkArticleCount
+    // Préparer les tâches avec les options personnalisées
+    const { tasks, errors: prepErrors } = await prepareBulkGenerationWithOptions(
+      siteIdsToProcess,
+      config.totalArticles,
+      {
+        keywordIds: config.keywordIds.length > 0 ? config.keywordIds : undefined,
+        enableImprovement: config.enableImprovement,
+        improvementModel: config.improvementModel,
+        improvementMode: config.improvementMode,
+        autoPublish: config.autoPublish,
+        imagesPerArticle: config.imagesPerArticle,
+      }
     );
 
     // Calculer le total d'articles à générer
@@ -194,11 +209,12 @@ export default function SchedulerPage() {
           task.siteId,
           task.keywordIds,
           task.autoPublish,
-          task.enableImprovement ? {
+          {
             enableImprovement: task.enableImprovement,
             improvementModel: task.improvementModel,
             improvementMode: task.improvementMode,
-          } : undefined
+            imagesPerArticle: task.imagesPerArticle,
+          }
         );
 
         // Check if cancelled after generation
@@ -373,27 +389,8 @@ export default function SchedulerPage() {
 
             <div className="h-8 w-px bg-gray-200" />
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Articles total:</span>
-              <Input
-                type="number"
-                min={1}
-                max={50}
-                value={bulkArticleCount}
-                onChange={(e) => setBulkArticleCount(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20 h-9"
-              />
-              {selectedSiteIds.size > 0 && (
-                <span className="text-xs text-gray-500">
-                  (~{Math.floor(bulkArticleCount / selectedSiteIds.size)} par config)
-                </span>
-              )}
-            </div>
-
-            <div className="h-8 w-px bg-gray-200" />
-
             <Button
-              onClick={handleBulkGeneration}
+              onClick={handleOpenBulkDialog}
               disabled={selectedSiteIds.size === 0 || bulkGenerating || progress.isRunning}
               className="bg-indigo-600 hover:bg-indigo-700 gap-2"
             >
@@ -402,7 +399,7 @@ export default function SchedulerPage() {
               ) : (
                 <Rocket className="h-4 w-4" />
               )}
-              {bulkGenerating || progress.isRunning ? "Génération..." : "Lancer"}
+              {bulkGenerating || progress.isRunning ? "Génération..." : "Configurer & Lancer"}
             </Button>
 
             <Button
@@ -416,6 +413,22 @@ export default function SchedulerPage() {
           </div>
         </div>
       )}
+
+      {/* Bulk Generation Dialog */}
+      <BulkGenerationDialog
+        open={bulkDialogOpen}
+        onOpenChange={setBulkDialogOpen}
+        selectedConfigs={Array.from(selectedSiteIds).map(siteId => {
+          const config = configs.find(c => c.site_id === siteId);
+          return {
+            siteId,
+            siteName: config?.site?.name || "Site inconnu",
+          };
+        })}
+        initialArticleCount={bulkArticleCount}
+        onLaunch={handleBulkGeneration}
+        isLoading={bulkGenerating}
+      />
 
       {/* Progress bar is rendered by BulkProgressWrapper in the layout */}
     </div>

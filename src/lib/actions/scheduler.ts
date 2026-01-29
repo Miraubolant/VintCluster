@@ -174,6 +174,47 @@ export async function getAvailableKeywordsForScheduler(siteId?: string): Promise
   return { data: data || [] };
 }
 
+// Récupérer les mots-clés disponibles pour la génération en masse (plusieurs sites)
+export async function getKeywordsForBulkGeneration(siteIds: string[]): Promise<{
+  data: Array<{ id: string; keyword: string; status: string | null; site_id: string | null; cluster: string | null; priority: number | null; site_name?: string }>;
+  error?: string;
+}> {
+  if (siteIds.length === 0) {
+    return { data: [], error: "Aucun site sélectionné" };
+  }
+
+  const supabase = await createClient();
+
+  // Récupérer les keywords pending (des sites sélectionnés + globaux)
+  const { data: keywords, error } = await supabase
+    .from("keywords")
+    .select("id, keyword, status, site_id, cluster, priority")
+    .eq("status", "pending")
+    .or(`site_id.in.(${siteIds.join(",")}),site_id.is.null`)
+    .order("priority", { ascending: false })
+    .order("keyword", { ascending: true });
+
+  if (error) {
+    return { data: [], error: error.message };
+  }
+
+  // Récupérer les noms des sites pour affichage
+  const { data: sites } = await supabase
+    .from("sites")
+    .select("id, name")
+    .in("id", siteIds);
+
+  const siteMap = new Map(sites?.map(s => [s.id, s.name]) || []);
+
+  // Ajouter le nom du site à chaque keyword
+  const enrichedKeywords = (keywords || []).map(k => ({
+    ...k,
+    site_name: k.site_id ? siteMap.get(k.site_id) || "Inconnu" : "Global",
+  }));
+
+  return { data: enrichedKeywords };
+}
+
 // Statistiques pour le dashboard scheduler
 export async function getSchedulerStats(): Promise<{
   totalConfigs: number;
@@ -357,6 +398,7 @@ export interface BulkGenerationTask {
   enableImprovement: boolean;
   improvementModel: string;
   improvementMode: string;
+  imagesPerArticle: number; // 0 = main image only, 1-5 = additional images in content
 }
 
 // Préparer les données pour la génération en masse
@@ -410,6 +452,100 @@ export async function prepareBulkGeneration(
       enableImprovement: (config as unknown as { enable_improvement?: boolean }).enable_improvement || false,
       improvementModel: ((config as unknown as { improvement_model?: string }).improvement_model) || "gpt-4o",
       improvementMode: ((config as unknown as { improvement_mode?: string }).improvement_mode) || "full-pbn",
+      imagesPerArticle: 0, // Default to main image only for backward compatibility
+    });
+  }
+
+  return { tasks, errors };
+}
+
+// Options pour la configuration personnalisée du batching
+export interface BulkGenerationOptions {
+  keywordIds?: string[];  // Mots-clés personnalisés (remplace ceux des configs)
+  enableImprovement?: boolean;
+  improvementModel?: string;
+  improvementMode?: string;
+  autoPublish?: boolean;
+  imagesPerArticle?: number; // 0 = main image only, 1-5 = additional images in content
+}
+
+// Préparer les données pour la génération en masse avec options personnalisées
+export async function prepareBulkGenerationWithOptions(
+  siteIds: string[],
+  totalArticles: number,
+  options: BulkGenerationOptions
+): Promise<{
+  tasks: BulkGenerationTask[];
+  errors: string[];
+}> {
+  if (siteIds.length === 0 || totalArticles <= 0) {
+    return { tasks: [], errors: ["Paramètres invalides"] };
+  }
+
+  const supabase = await createClient();
+  const articlesPerConfig = Math.floor(totalArticles / siteIds.length);
+  const remainder = totalArticles % siteIds.length;
+
+  const tasks: BulkGenerationTask[] = [];
+  const errors: string[] = [];
+
+  // Si des keywords personnalisés sont fournis, les utiliser
+  const useCustomKeywords = options.keywordIds && options.keywordIds.length > 0;
+
+  for (let i = 0; i < siteIds.length; i++) {
+    const siteId = siteIds[i];
+    const articlesToGenerate = articlesPerConfig + (i < remainder ? 1 : 0);
+
+    // Récupérer le nom du site
+    const { data: site } = await supabase
+      .from("sites")
+      .select("id, name")
+      .eq("id", siteId)
+      .single();
+
+    if (!site) {
+      errors.push(`Site non trouvé: ${siteId}`);
+      continue;
+    }
+
+    // Déterminer les keywords à utiliser
+    let keywordIds: string[];
+    if (useCustomKeywords) {
+      // Filtrer les keywords pour ce site (ceux liés au site ou globaux)
+      const { data: validKeywords } = await supabase
+        .from("keywords")
+        .select("id")
+        .in("id", options.keywordIds!)
+        .eq("status", "pending")
+        .or(`site_id.eq.${siteId},site_id.is.null`);
+
+      keywordIds = validKeywords?.map(k => k.id) || [];
+    } else {
+      // Utiliser les keywords de la config existante
+      const { data: config } = await supabase
+        .from("scheduler_config")
+        .select("keyword_ids")
+        .eq("site_id", siteId)
+        .single();
+
+      keywordIds = (config?.keyword_ids as string[]) || [];
+    }
+
+    if (keywordIds.length === 0) {
+      errors.push(`${site.name}: Aucun mot-clé disponible`);
+      continue;
+    }
+
+    tasks.push({
+      siteId,
+      siteName: site.name,
+      keywordIds,
+      autoPublish: options.autoPublish ?? false,
+      count: articlesToGenerate,
+      enableImprovement: options.enableImprovement ?? false,
+      improvementModel: options.improvementModel || "gpt-4o",
+      improvementMode: options.improvementMode || "full-pbn",
+      imagesPerArticle: options.imagesPerArticle ?? 0,
     });
   }
 
@@ -421,6 +557,26 @@ export interface BulkImprovementOptions {
   enableImprovement: boolean;
   improvementModel: string;
   improvementMode: string;
+  imagesPerArticle?: number;
+}
+
+// Helper: Extract H2 titles from markdown content
+function extractH2Titles(content: string): string[] {
+  const h2Regex = /^## (.+)$/gm;
+  const titles: string[] = [];
+  let match;
+  while ((match = h2Regex.exec(content)) !== null) {
+    titles.push(match[1].trim());
+  }
+  return titles;
+}
+
+// Helper: Insert image after H2 in markdown content
+function insertImageAfterH2(content: string, h2Title: string, imageUrl: string, imageAlt: string): string {
+  const escapedTitle = h2Title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const h2Regex = new RegExp(`(^## ${escapedTitle}\\s*$)`, 'm');
+  const imageMarkdown = `\n\n![${imageAlt}](${imageUrl})\n`;
+  return content.replace(h2Regex, `$1${imageMarkdown}`);
 }
 
 // Générer un seul article pour la génération en masse
@@ -493,7 +649,7 @@ export async function generateSingleBulkArticle(
       }
     }
 
-    // Générer l'image
+    // Générer l'image principale
     let imageUrl: string | null = null;
     let imageAlt: string | null = null;
 
@@ -506,6 +662,37 @@ export async function generateSingleBulkArticle(
       }
     } catch {
       // Continue sans image
+    }
+
+    // Générer les images additionnelles dans le contenu (basées sur les H2)
+    const imagesPerArticle = improvementOptions?.imagesPerArticle ?? 0;
+    if (imagesPerArticle > 0) {
+      try {
+        const h2Titles = extractH2Titles(generated.content);
+        const titlesToProcess = h2Titles.slice(0, imagesPerArticle);
+
+        for (const h2Title of titlesToProcess) {
+          try {
+            // Générer un prompt basé sur le titre H2
+            const h2ImagePrompt = generateImagePrompt(h2Title, keyword.keyword);
+            const h2Image = await generateImage(h2ImagePrompt, "flux-schnell", siteId);
+
+            if (h2Image) {
+              // Insérer l'image après le H2 dans le contenu
+              generated.content = insertImageAfterH2(
+                generated.content,
+                h2Title,
+                h2Image.url,
+                h2Image.alt
+              );
+            }
+          } catch {
+            // Continue si une image échoue
+          }
+        }
+      } catch {
+        // Continue si l'extraction H2 échoue
+      }
     }
 
     // Créer l'article
