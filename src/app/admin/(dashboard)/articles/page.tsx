@@ -3,14 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -20,27 +12,49 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   RefreshCw,
-  Search,
   Plus,
   Sparkles,
-  X,
-  CheckCircle,
-  Trash2,
-  FileCheck,
-  Eye,
-  XCircle,
   ImageIcon,
-  Loader2,
-  Send,
+  FileText,
+  Edit,
+  CheckCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+
+// Composants partagés
 import {
-  ArticlesStats,
-  ArticlesTable,
+  DataTable,
+  SelectionToolbar,
+  StatsGrid,
+  FilterBar,
+  ConfirmDialog,
+  type StatCard,
+  type FilterConfig,
+} from "@/components/admin/shared";
+import { useTableState, useTableKeyboardShortcuts } from "@/hooks";
+
+// Composants spécifiques articles
+import {
   ArticlePreviewDialog,
   CreateArticleDialog,
   GenerateArticleDialog,
+  getArticleColumns,
+  ArticleRowActions,
+  ArticleBulkActions,
+  ARTICLE_STATUS_OPTIONS,
+  type ArticleWithDetails,
 } from "@/components/admin/articles";
+
+// Actions serveur
 import {
   getArticles,
   getArticleStats,
@@ -53,36 +67,64 @@ import {
   improveArticleWithAI,
 } from "@/lib/actions/articles";
 import { getSites } from "@/lib/actions/sites";
+
+// Context et types
 import { useBulkProgress } from "@/contexts/BulkProgressContext";
 import { MODEL_INFO, type ImageModel } from "@/lib/replicate";
-import { IMPROVEMENT_MODELS, IMPROVEMENT_MODES, type ImprovementModel, type ImprovementMode } from "@/lib/openai";
+import {
+  IMPROVEMENT_MODELS,
+  IMPROVEMENT_MODES,
+  type ImprovementModel,
+  type ImprovementMode,
+} from "@/lib/openai";
 import { toast } from "sonner";
-import type { Site, Article, ArticleStatus } from "@/types/database";
+import type { Site, ArticleStatus } from "@/types/database";
 
-interface ArticleWithKeyword extends Article {
-  keyword?: {
-    id: string;
-    keyword: string;
-  };
-  site?: {
-    id: string;
-    name: string;
-    domain: string;
-  };
-}
+// Configuration des filtres
+const getFilterConfigs = (sites: Site[]): FilterConfig[] => [
+  {
+    key: "search",
+    type: "search",
+    label: "Recherche",
+    placeholder: "Rechercher un article...",
+  },
+  {
+    key: "siteId",
+    type: "select",
+    label: "Site",
+    placeholder: "Tous les sites",
+    options: sites.map((s) => ({ value: s.id, label: s.name })),
+  },
+  {
+    key: "status",
+    type: "select",
+    label: "Statut",
+    placeholder: "Tous les statuts",
+    options: ARTICLE_STATUS_OPTIONS,
+  },
+];
 
-const statusOptions: { value: ArticleStatus | "all"; label: string }[] = [
-  { value: "all", label: "Tous les statuts" },
-  { value: "draft", label: "Brouillons" },
-  { value: "ready", label: "Prêts" },
-  { value: "published", label: "Publiés" },
-  { value: "unpublished", label: "Dépubliés" },
+// Configuration des stats
+const getStatsCards = (stats: {
+  total: number;
+  draft: number;
+  ready: number;
+  published: number;
+  unpublished: number;
+}): StatCard[] => [
+  { label: "Total", value: stats.total, icon: FileText, color: "gray" },
+  { label: "Brouillons", value: stats.draft, icon: Edit, color: "amber" },
+  { label: "Prêts", value: stats.ready, icon: CheckCircle, color: "blue" },
+  { label: "Publiés", value: stats.published, icon: Eye, color: "green" },
+  { label: "Dépubliés", value: stats.unpublished, icon: EyeOff, color: "gray" },
 ];
 
 export default function ArticlesPage() {
   const router = useRouter();
+
+  // State principal
   const [sites, setSites] = useState<Site[]>([]);
-  const [articles, setArticles] = useState<ArticleWithKeyword[]>([]);
+  const [articles, setArticles] = useState<ArticleWithDetails[]>([]);
   const [stats, setStats] = useState({
     total: 0,
     draft: 0,
@@ -92,33 +134,51 @@ export default function ArticlesPage() {
   });
   const [loading, setLoading] = useState(true);
   const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Table state avec hook
+  const table = useTableState({
+    items: articles,
+    getItemId: (a) => a.id,
+  });
+
+  // Filtres locaux (synchro avec serveur)
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<ArticleStatus | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [previewArticle, setPreviewArticle] = useState<ArticleWithKeyword | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Regenerate images dialog
+  // Dialogs
+  const [previewArticle, setPreviewArticle] = useState<ArticleWithDetails | null>(null);
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<ImageModel>("flux-schnell");
-
-  // IndexNow submission
-  const [indexNowLoading, setIndexNowLoading] = useState(false);
-
-  // AI Improvement dialog
   const [improveDialogOpen, setImproveDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Modèles sélectionnés
+  const [selectedModel, setSelectedModel] = useState<ImageModel>("flux-schnell");
   const [selectedAIModel, setSelectedAIModel] = useState<ImprovementModel>("gpt-4o");
   const [selectedImproveMode, setSelectedImproveMode] = useState<ImprovementMode>("full-pbn");
+
+  // IndexNow loading
+  const [indexNowLoading, setIndexNowLoading] = useState(false);
 
   // Progress tracking
   const { progress, setProgress, isCancelled } = useBulkProgress();
   const cancelledRef = useRef(false);
 
-  // Sync cancelled state with ref
+  // Sync cancelled state
   useEffect(() => {
     cancelledRef.current = isCancelled;
   }, [isCancelled]);
 
+  // Raccourcis clavier
+  useTableKeyboardShortcuts({
+    onSelectAll: table.selectAll,
+    onClearSelection: table.clearSelection,
+    onDelete: () => setDeleteDialogOpen(true),
+    hasSelection: table.selectedCount > 0,
+    enabled: !progress.isRunning,
+  });
+
+  // Chargement des données
   const loadData = useCallback(async () => {
     setLoading(true);
 
@@ -142,7 +202,16 @@ export default function ArticlesPage() {
     loadData();
   }, [loadData]);
 
-  async function handleStatusChange(id: string, status: ArticleStatus) {
+  // Handlers de filtres
+  const handleFilterChange = (key: string, value: string | null) => {
+    table.clearSelection();
+    if (key === "search") setSearchQuery(value || "");
+    if (key === "siteId") setSelectedSiteId(value);
+    if (key === "status") setSelectedStatus(value as ArticleStatus | null);
+  };
+
+  // Handlers d'actions individuelles
+  const handleStatusChange = async (id: string, status: ArticleStatus) => {
     const result = await updateArticleStatus(id, status);
     if (result.error) {
       toast.error(result.error);
@@ -150,9 +219,9 @@ export default function ArticlesPage() {
     }
     toast.success("Statut mis à jour");
     loadData();
-  }
+  };
 
-  async function handleDelete(id: string) {
+  const handleDelete = async (id: string) => {
     const result = await deleteArticle(id);
     if (result.error) {
       toast.error(result.error);
@@ -160,13 +229,14 @@ export default function ArticlesPage() {
     }
     toast.success("Article supprimé");
     loadData();
-  }
+  };
 
-  async function handleBulkStatusChange(status: ArticleStatus) {
-    if (selectedIds.length === 0) return;
+  // Handlers d'actions bulk
+  const handleBulkStatusChange = async (status: ArticleStatus) => {
+    if (table.selectedCount === 0) return;
 
     setBulkLoading(true);
-    const result = await bulkUpdateArticleStatus(selectedIds, status);
+    const result = await bulkUpdateArticleStatus(table.selectedIds, status);
     setBulkLoading(false);
 
     if (result.error) {
@@ -175,20 +245,16 @@ export default function ArticlesPage() {
     }
 
     toast.success(`${result.count} article(s) mis à jour`);
-    setSelectedIds([]);
+    table.clearSelection();
     loadData();
-  }
+  };
 
-  async function handleBulkDelete() {
-    if (selectedIds.length === 0) return;
+  const handleBulkDelete = async () => {
+    if (table.selectedCount === 0) return;
 
-    const confirmed = window.confirm(
-      `Êtes-vous sûr de vouloir supprimer ${selectedIds.length} article(s) ?`
-    );
-    if (!confirmed) return;
-
+    setDeleteDialogOpen(false);
     setBulkLoading(true);
-    const result = await bulkDeleteArticles(selectedIds);
+    const result = await bulkDeleteArticles(table.selectedIds);
     setBulkLoading(false);
 
     if (result.error) {
@@ -197,62 +263,51 @@ export default function ArticlesPage() {
     }
 
     toast.success(`${result.count} article(s) supprimé(s)`);
-    setSelectedIds([]);
+    table.clearSelection();
     loadData();
-  }
+  };
 
-  async function handleBulkRegenerateImages() {
-    if (selectedIds.length === 0) return;
+  const handleBulkRegenerateImages = async () => {
+    if (table.selectedCount === 0) return;
 
     setRegenerateDialogOpen(false);
     cancelledRef.current = false;
 
-    // Get article titles for progress display
-    const selectedArticles = articles.filter(a => selectedIds.includes(a.id));
+    const selectedArticles = table.selectedItems;
 
-    // Initialize progress
     setProgress({
       isRunning: true,
-      total: selectedIds.length,
+      total: selectedArticles.length,
       completed: 0,
       currentSite: null,
       errors: [],
       results: [],
     });
 
-    // Generate images one by one
     for (let i = 0; i < selectedArticles.length; i++) {
       const article = selectedArticles[i];
 
-      // Check if cancelled
       if (cancelledRef.current) {
-        setProgress(prev => ({
+        setProgress((prev) => ({
           ...prev,
           errors: [...prev.errors, "Annulé par l'utilisateur"],
         }));
         break;
       }
 
-      // Update current status
-      setProgress(prev => ({
+      setProgress((prev) => ({
         ...prev,
-        currentSite: `${article.title.substring(0, 40)}${article.title.length > 40 ? "..." : ""} (${i + 1}/${selectedIds.length})`,
+        currentSite: `${article.title.substring(0, 40)}... (${i + 1}/${selectedArticles.length})`,
       }));
 
       const result = await generateArticleImage(article.id, selectedModel);
 
-      // Check if cancelled after generation
       if (cancelledRef.current) {
         if (result.url) {
-          setProgress(prev => ({
+          setProgress((prev) => ({
             ...prev,
             completed: prev.completed + 1,
             results: [...prev.results, { siteName: article.site?.name || "Article", title: article.title }],
-            errors: [...prev.errors, "Annulé par l'utilisateur"],
-          }));
-        } else {
-          setProgress(prev => ({
-            ...prev,
             errors: [...prev.errors, "Annulé par l'utilisateur"],
           }));
         }
@@ -260,36 +315,30 @@ export default function ArticlesPage() {
       }
 
       if (result.url) {
-        setProgress(prev => ({
+        setProgress((prev) => ({
           ...prev,
           completed: prev.completed + 1,
           results: [...prev.results, { siteName: article.site?.name || "Article", title: article.title }],
         }));
       } else if (result.error) {
-        setProgress(prev => ({
+        setProgress((prev) => ({
           ...prev,
           errors: [...prev.errors, `${article.title.substring(0, 30)}: ${result.error}`],
         }));
       }
     }
 
-    // Finalize
     cancelledRef.current = false;
-    setProgress(prev => ({
-      ...prev,
-      isRunning: false,
-      currentSite: null,
-    }));
-    setSelectedIds([]);
+    setProgress((prev) => ({ ...prev, isRunning: false, currentSite: null }));
+    table.clearSelection();
     loadData();
-  }
+  };
 
-  async function handleBulkIndexNow() {
-    if (selectedIds.length === 0) return;
+  const handleBulkIndexNow = async () => {
+    if (table.selectedCount === 0) return;
 
-    // Vérifier qu'il y a des articles publiés
     const publishedCount = articles.filter(
-      (a) => selectedIds.includes(a.id) && a.status === "published"
+      (a) => table.selectedIds.includes(a.id) && a.status === "published"
     ).length;
 
     if (publishedCount === 0) {
@@ -298,7 +347,7 @@ export default function ArticlesPage() {
     }
 
     setIndexNowLoading(true);
-    const result = await bulkSubmitToIndexNow(selectedIds);
+    const result = await bulkSubmitToIndexNow(table.selectedIds);
     setIndexNowLoading(false);
 
     if (result.errors.length > 0) {
@@ -309,61 +358,50 @@ export default function ArticlesPage() {
       toast.success(`${result.submitted} article(s) soumis à IndexNow`);
     }
 
-    setSelectedIds([]);
-  }
+    table.clearSelection();
+  };
 
-  async function handleBulkImproveArticles() {
-    if (selectedIds.length === 0) return;
+  const handleBulkImprove = async () => {
+    if (table.selectedCount === 0) return;
 
     setImproveDialogOpen(false);
     cancelledRef.current = false;
 
-    // Get article titles for progress display
-    const selectedArticles = articles.filter(a => selectedIds.includes(a.id));
+    const selectedArticles = table.selectedItems;
 
-    // Initialize progress
     setProgress({
       isRunning: true,
-      total: selectedIds.length,
+      total: selectedArticles.length,
       completed: 0,
       currentSite: null,
       errors: [],
       results: [],
     });
 
-    // Improve articles one by one
     for (let i = 0; i < selectedArticles.length; i++) {
       const article = selectedArticles[i];
 
-      // Check if cancelled
       if (cancelledRef.current) {
-        setProgress(prev => ({
+        setProgress((prev) => ({
           ...prev,
           errors: [...prev.errors, "Annulé par l'utilisateur"],
         }));
         break;
       }
 
-      // Update current status
-      setProgress(prev => ({
+      setProgress((prev) => ({
         ...prev,
-        currentSite: `Amélioration: ${article.title.substring(0, 35)}${article.title.length > 35 ? "..." : ""} (${i + 1}/${selectedIds.length})`,
+        currentSite: `Amélioration: ${article.title.substring(0, 35)}... (${i + 1}/${selectedArticles.length})`,
       }));
 
       const result = await improveArticleWithAI(article.id, selectedAIModel, selectedImproveMode);
 
-      // Check if cancelled after improvement
       if (cancelledRef.current) {
         if (result.success) {
-          setProgress(prev => ({
+          setProgress((prev) => ({
             ...prev,
             completed: prev.completed + 1,
             results: [...prev.results, { siteName: article.site?.name || "Article", title: article.title }],
-            errors: [...prev.errors, "Annulé par l'utilisateur"],
-          }));
-        } else {
-          setProgress(prev => ({
-            ...prev,
             errors: [...prev.errors, "Annulé par l'utilisateur"],
           }));
         }
@@ -371,32 +409,31 @@ export default function ArticlesPage() {
       }
 
       if (result.success) {
-        setProgress(prev => ({
+        setProgress((prev) => ({
           ...prev,
           completed: prev.completed + 1,
           results: [...prev.results, { siteName: article.site?.name || "Article", title: article.title }],
         }));
       } else if (result.error) {
-        setProgress(prev => ({
+        setProgress((prev) => ({
           ...prev,
           errors: [...prev.errors, `${article.title.substring(0, 30)}: ${result.error}`],
         }));
       }
     }
 
-    // Finalize
     cancelledRef.current = false;
-    setProgress(prev => ({
-      ...prev,
-      isRunning: false,
-      currentSite: null,
-    }));
-    setSelectedIds([]);
+    setProgress((prev) => ({ ...prev, isRunning: false, currentSite: null }));
+    table.clearSelection();
     loadData();
-  }
+  };
+
+  // Colonnes avec actions
+  const columns = getArticleColumns();
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Articles</h1>
@@ -429,195 +466,102 @@ export default function ArticlesPage() {
         </div>
       </div>
 
-      <ArticlesStats stats={stats} />
+      {/* Stats */}
+      <StatsGrid stats={getStatsCards(stats)} columns={5} loading={loading} />
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Rechercher un article..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        <Select
-          value={selectedSiteId || "all"}
-          onValueChange={(value) => setSelectedSiteId(value === "all" ? null : value)}
-        >
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Tous les sites" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les sites</SelectItem>
-            {sites.map((site) => (
-              <SelectItem key={site.id} value={site.id}>
-                {site.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={selectedStatus || "all"}
-          onValueChange={(value) =>
-            setSelectedStatus(value === "all" ? null : (value as ArticleStatus))
-          }
-        >
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Tous les statuts" />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Barre d'actions groupées */}
-      {selectedIds.length > 0 && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="font-medium text-indigo-900">
-              {selectedIds.length} article(s) sélectionné(s)
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedIds([])}
-              className="text-indigo-600 hover:text-indigo-800"
-            >
-              <X className="h-4 w-4 mr-1" />
-              Désélectionner
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRegenerateDialogOpen(true)}
-              disabled={bulkLoading || progress.isRunning}
-              className="text-purple-700 border-purple-300 hover:bg-purple-50"
-            >
-              <ImageIcon className="h-4 w-4 mr-1" />
-              Régénérer images
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleBulkIndexNow}
-              disabled={bulkLoading || progress.isRunning || indexNowLoading}
-              className="text-cyan-700 border-cyan-300 hover:bg-cyan-50"
-            >
-              {indexNowLoading ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 mr-1" />
-              )}
-              IndexNow
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setImproveDialogOpen(true)}
-              disabled={bulkLoading || progress.isRunning}
-              className="text-amber-700 border-amber-300 hover:bg-amber-50"
-            >
-              <Sparkles className="h-4 w-4 mr-1" />
-              Améliorer IA
-            </Button>
-            <div className="w-px h-6 bg-gray-300 mx-1" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleBulkStatusChange("draft")}
-              disabled={bulkLoading || progress.isRunning}
-              className="text-yellow-700 border-yellow-300 hover:bg-yellow-50"
-            >
-              <FileCheck className="h-4 w-4 mr-1" />
-              Brouillon
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleBulkStatusChange("ready")}
-              disabled={bulkLoading || progress.isRunning}
-              className="text-blue-700 border-blue-300 hover:bg-blue-50"
-            >
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Prêt
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleBulkStatusChange("published")}
-              disabled={bulkLoading || progress.isRunning}
-              className="text-green-700 border-green-300 hover:bg-green-50"
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              Publier
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleBulkStatusChange("unpublished")}
-              disabled={bulkLoading || progress.isRunning}
-              className="text-gray-700 border-gray-300 hover:bg-gray-50"
-            >
-              <XCircle className="h-4 w-4 mr-1" />
-              Dépublier
-            </Button>
-            <div className="w-px h-6 bg-gray-300 mx-1" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleBulkDelete}
-              disabled={bulkLoading || progress.isRunning}
-              className="text-red-700 border-red-300 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Supprimer
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <ArticlesTable
-        articles={articles}
-        selectedIds={selectedIds}
-        onSelectionChange={setSelectedIds}
-        onView={(article) => setPreviewArticle(article)}
-        onEdit={(article) => router.push(`/admin/articles/${article.id}`)}
-        onStatusChange={handleStatusChange}
-        onDelete={handleDelete}
+      {/* Filtres */}
+      <FilterBar
+        filters={getFilterConfigs(sites)}
+        values={{
+          search: searchQuery,
+          siteId: selectedSiteId,
+          status: selectedStatus,
+        }}
+        onChange={handleFilterChange}
+        onReset={() => {
+          setSearchQuery("");
+          setSelectedSiteId(null);
+          setSelectedStatus(null);
+          table.clearSelection();
+        }}
       />
 
+      {/* Toolbar de sélection */}
+      {table.selectedCount > 0 && (
+        <SelectionToolbar
+          selectedCount={table.selectedCount}
+          totalCount={articles.length}
+          onClearSelection={table.clearSelection}
+          onSelectAll={table.selectAll}
+          itemLabel="article"
+        >
+          <ArticleBulkActions
+            onRegenerateImages={() => setRegenerateDialogOpen(true)}
+            onIndexNow={handleBulkIndexNow}
+            onImprove={() => setImproveDialogOpen(true)}
+            onStatusChange={handleBulkStatusChange}
+            onDelete={() => setDeleteDialogOpen(true)}
+            disabled={bulkLoading || progress.isRunning}
+            indexNowLoading={indexNowLoading}
+          />
+        </SelectionToolbar>
+      )}
+
+      {/* Table */}
+      <DataTable
+        items={articles}
+        columns={columns}
+        getItemId={(a) => a.id}
+        selectable
+        selectedIds={table.selectedIds}
+        onSelectionChange={table.setSelectedIds}
+        rowActions={(article) => (
+          <ArticleRowActions
+            article={article}
+            onView={setPreviewArticle}
+            onEdit={(a) => router.push(`/admin/articles/${a.id}`)}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
+          />
+        )}
+        loading={loading}
+        emptyMessage="Aucun article trouvé"
+        emptyDescription="Générez des articles à partir de vos mots-clés"
+      />
+
+      {/* Dialogs */}
       <ArticlePreviewDialog
         article={previewArticle}
         open={!!previewArticle}
         onOpenChange={(open) => !open && setPreviewArticle(null)}
       />
 
-      {/* Dialog de régénération d'images */}
+      {/* Dialog confirmation suppression */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Supprimer les articles"
+        description={`Êtes-vous sûr de vouloir supprimer ${table.selectedCount} article(s) ? Cette action est irréversible.`}
+        variant="destructive"
+        confirmLabel="Supprimer"
+        onConfirm={handleBulkDelete}
+        loading={bulkLoading}
+      />
+
+      {/* Dialog régénération images */}
       <Dialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Régénérer les images</DialogTitle>
             <DialogDescription>
-              Générer de nouvelles images pour {selectedIds.length} article(s) sélectionné(s).
-              Choisissez le modèle à utiliser.
+              Générer de nouvelles images pour {table.selectedCount} article(s).
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Modèle de génération</label>
-              <Select value={selectedModel} onValueChange={(value) => setSelectedModel(value as ImageModel)}>
+              <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as ImageModel)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -632,9 +576,7 @@ export default function ArticlesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
-                {MODEL_INFO[selectedModel].description}
-              </p>
+              <p className="text-xs text-gray-500">{MODEL_INFO[selectedModel].description}</p>
             </div>
           </div>
 
@@ -642,32 +584,28 @@ export default function ArticlesPage() {
             <Button variant="outline" onClick={() => setRegenerateDialogOpen(false)}>
               Annuler
             </Button>
-            <Button
-              onClick={handleBulkRegenerateImages}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
+            <Button onClick={handleBulkRegenerateImages} className="bg-purple-600 hover:bg-purple-700">
               <ImageIcon className="h-4 w-4 mr-2" />
-              Régénérer {selectedIds.length} image(s)
+              Régénérer {table.selectedCount} image(s)
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog d'amélioration IA */}
+      {/* Dialog amélioration IA */}
       <Dialog open={improveDialogOpen} onOpenChange={setImproveDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Améliorer avec l'IA</DialogTitle>
             <DialogDescription>
-              Améliorer {selectedIds.length} article(s) avec l'IA. Structure, SEO, FAQ et CTA seront optimisés.
+              Améliorer {table.selectedCount} article(s) avec l'IA.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Mode selector */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Mode d'amélioration</label>
-              <Select value={selectedImproveMode} onValueChange={(value) => setSelectedImproveMode(value as ImprovementMode)}>
+              <Select value={selectedImproveMode} onValueChange={(v) => setSelectedImproveMode(v as ImprovementMode)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -682,15 +620,12 @@ export default function ArticlesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
-                {IMPROVEMENT_MODES[selectedImproveMode].description}
-              </p>
+              <p className="text-xs text-gray-500">{IMPROVEMENT_MODES[selectedImproveMode].description}</p>
             </div>
 
-            {/* Model selector */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Modèle IA</label>
-              <Select value={selectedAIModel} onValueChange={(value) => setSelectedAIModel(value as ImprovementModel)}>
+              <Select value={selectedAIModel} onValueChange={(v) => setSelectedAIModel(v as ImprovementModel)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -705,40 +640,35 @@ export default function ArticlesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
-                {IMPROVEMENT_MODELS[selectedAIModel].description}
-              </p>
+              <p className="text-xs text-gray-500">{IMPROVEMENT_MODELS[selectedAIModel].description}</p>
             </div>
 
-            {/* Info box based on mode */}
-            <div className={`rounded-lg p-3 ${
-              selectedImproveMode === "full-pbn"
-                ? "bg-emerald-50 border border-emerald-200"
-                : selectedImproveMode === "ai-search"
-                ? "bg-blue-50 border border-blue-200"
-                : "bg-amber-50 border border-amber-200"
-            }`}>
-              <p className={`text-xs ${
+            <div
+              className={`rounded-lg p-3 ${
                 selectedImproveMode === "full-pbn"
-                  ? "text-emerald-800"
+                  ? "bg-emerald-50 border border-emerald-200"
                   : selectedImproveMode === "ai-search"
-                  ? "text-blue-800"
-                  : "text-amber-800"
-              }`}>
+                  ? "bg-blue-50 border border-blue-200"
+                  : "bg-amber-50 border border-amber-200"
+              }`}
+            >
+              <p
+                className={`text-xs ${
+                  selectedImproveMode === "full-pbn"
+                    ? "text-emerald-800"
+                    : selectedImproveMode === "ai-search"
+                    ? "text-blue-800"
+                    : "text-amber-800"
+                }`}
+              >
                 {selectedImproveMode === "full-pbn" && (
-                  <>
-                    <strong>🚀 Full PBN:</strong> Stratégie complète avec détection auto du format (guide, liste, étude de cas, comparatif), signaux E-E-A-T, enrichissement sémantique et FAQ premium.
-                  </>
+                  <><strong>Full PBN:</strong> Stratégie complète avec détection auto du format, signaux E-E-A-T, enrichissement sémantique et FAQ premium.</>
                 )}
                 {selectedImproveMode === "ai-search" && (
-                  <>
-                    <strong>🤖 AI Search:</strong> Optimisé pour être cité par ChatGPT, Perplexity et Google SGE. Format "citation-ready" avec answer boxes et définitions encadrées.
-                  </>
+                  <><strong>AI Search:</strong> Optimisé pour ChatGPT, Perplexity et Google SGE. Format "citation-ready" avec answer boxes.</>
                 )}
                 {selectedImproveMode === "seo-classic" && (
-                  <>
-                    <strong>🎯 SEO Classic:</strong> Structure optimisée pour les featured snippets Google. Titres H2/H3 descriptifs, listes à puces et FAQ snippet-ready.
-                  </>
+                  <><strong>SEO Classic:</strong> Structure optimisée pour les featured snippets Google. Titres descriptifs, listes à puces et FAQ.</>
                 )}
               </p>
             </div>
@@ -749,7 +679,7 @@ export default function ArticlesPage() {
               Annuler
             </Button>
             <Button
-              onClick={handleBulkImproveArticles}
+              onClick={handleBulkImprove}
               className={
                 selectedImproveMode === "full-pbn"
                   ? "bg-emerald-600 hover:bg-emerald-700"
@@ -759,13 +689,11 @@ export default function ArticlesPage() {
               }
             >
               <Sparkles className="h-4 w-4 mr-2" />
-              Améliorer {selectedIds.length} article(s)
+              Améliorer {table.selectedCount} article(s)
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Progress bar is rendered by BulkProgressWrapper in the layout */}
     </div>
   );
 }

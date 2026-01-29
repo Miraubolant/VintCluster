@@ -1,3 +1,7 @@
-// Hooks personnalisés - à implémenter au fur et à mesure
+// Table state management
+export { useTableState } from "./useTableState";
+export type { UseTableStateOptions, UseTableStateReturn } from "./useTableState";
 
-export {};
+// Keyboard shortcuts
+export { useKeyboardShortcuts, useTableKeyboardShortcuts } from "./useKeyboardShortcuts";
+export type { ShortcutConfig, UseKeyboardShortcutsOptions } from "./useKeyboardShortcuts";

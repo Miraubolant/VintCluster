@@ -1,5 +1,8 @@
-export { KeywordsStats } from "./KeywordsStats";
-export { KeywordsFilters } from "./KeywordsFilters";
-export { KeywordsTable } from "./KeywordsTable";
+// Dialogs
 export { ImportKeywordsDialog } from "./ImportKeywordsDialog";
-export { BulkActions } from "./BulkActions";
+
+// Nouveaux composants modulaires
+export { getKeywordColumns, KeywordStatusBadge, KEYWORD_STATUS_CONFIG, KEYWORD_STATUS_OPTIONS } from "./KeywordColumns";
+export type { KeywordWithSite } from "./KeywordColumns";
+export { KeywordRowActions } from "./KeywordRowActions";
+export { KeywordBulkActions } from "./KeywordBulkActions";
