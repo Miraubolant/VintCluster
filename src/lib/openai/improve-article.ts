@@ -2,7 +2,7 @@ import { getOpenAIClient } from "./client";
 import type { FAQItem } from "@/types/database";
 
 // Model options for improvement
-export type ImprovementModel = "gpt-4o" | "gpt-4-turbo";
+export type ImprovementModel = "gpt-4.1" | "gpt-4.1-mini" | "gpt-4o" | "gpt-4-turbo";
 
 // Improvement modes
 export type ImprovementMode = "seo-classic" | "ai-search" | "full-pbn";
@@ -20,18 +20,30 @@ export interface ImprovementOptions {
 }
 
 // Configuration des modèles disponibles
-export const IMPROVEMENT_MODELS: Record<ImprovementModel, { name: string; description: string; speed: string; maxWords: string }> = {
+export const IMPROVEMENT_MODELS: Record<ImprovementModel, { name: string; description: string; speed: string; maxTokens: number }> = {
+  "gpt-4.1": {
+    name: "GPT-4.1 (Recommandé)",
+    description: "Le plus récent, meilleure qualité, articles très longs",
+    speed: "~20s/article",
+    maxTokens: 16384,
+  },
+  "gpt-4.1-mini": {
+    name: "GPT-4.1 Mini",
+    description: "Rapide et économique, bat GPT-4o, -83% coût",
+    speed: "~10s/article",
+    maxTokens: 16384,
+  },
   "gpt-4o": {
-    name: "GPT-4o (Recommandé)",
-    description: "Le plus rapide, articles longs (2500+ mots)",
+    name: "GPT-4o",
+    description: "Bon équilibre qualité/vitesse",
     speed: "~15s/article",
-    maxWords: "2500-3000",
+    maxTokens: 8192,
   },
   "gpt-4-turbo": {
     name: "GPT-4 Turbo",
-    description: "Plus créatif mais limité (~1500 mots max)",
+    description: "Plus créatif mais output limité",
     speed: "~25s/article",
-    maxWords: "1000-1500",
+    maxTokens: 4096,
   },
 };
 
@@ -308,8 +320,9 @@ Retourne UNIQUEMENT un JSON valide:
   ]
 }`;
 
-  // max_tokens selon le modèle (GPT-4o: 16k, GPT-4-turbo: 4k)
-  const maxTokens = options.model === "gpt-4o" ? 8192 : 4096;
+  // max_tokens selon la config du modèle
+  const modelConfig = IMPROVEMENT_MODELS[options.model];
+  const maxTokens = modelConfig?.maxTokens || 8192;
 
   const response = await openai.chat.completions.create({
     model: options.model,
@@ -317,7 +330,7 @@ Retourne UNIQUEMENT un JSON valide:
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    temperature: 0.75,
+    temperature: 0.7,
     max_tokens: maxTokens,
     response_format: { type: "json_object" },
   });
@@ -335,20 +348,18 @@ Retourne UNIQUEMENT un JSON valide:
     faq: FAQItem[];
   };
 
-  // Validate minimum requirements
-  if (!parsed.title || parsed.title.length < 10) {
-    throw new Error("Titre invalide ou trop court");
+  // Validation basique - uniquement titre et contenu non vides
+  if (!parsed.title || parsed.title.length < 5) {
+    throw new Error("Titre invalide ou manquant");
   }
 
-  // Compter les mots (pas les caractères)
-  const wordCount = parsed.content ? parsed.content.split(/\s+/).filter(w => w.length > 0).length : 0;
-
-  // Minimum selon le modèle (GPT-4o peut faire plus long que GPT-4-turbo)
-  const minWords = options.model === "gpt-4o" ? 1500 : 800;
-
-  if (!parsed.content || wordCount < minWords) {
-    throw new Error(`Contenu trop court: ${wordCount} mots (minimum ${minWords} mots attendus pour ${options.model})`);
+  if (!parsed.content || parsed.content.length < 100) {
+    throw new Error("Contenu invalide ou manquant");
   }
+
+  // Log informatif du nombre de mots (pas de blocage)
+  const wordCount = parsed.content.split(/\s+/).filter(w => w.length > 0).length;
+  console.log(`[improve-article] Article généré: ${wordCount} mots avec ${options.model}`);
 
   // Use existing FAQ if new one is insufficient
   const finalFaq = parsed.faq && parsed.faq.length >= 3
