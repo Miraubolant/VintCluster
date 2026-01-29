@@ -1,11 +1,34 @@
+// Client OpenAI
 export { getOpenAIClient } from "./client";
-export { generateArticle, type GeneratedArticle } from "./generate-article";
+
+// Configuration
 export {
+  MODELS_CONFIG,
+  MODES_CONFIG,
+  VINT_PRODUCTS,
+  type ArticleModel,
+  type ArticleMode,
+  type ArticleResult,
+  type GenerationOptions,
+} from "./config";
+
+// Fonction principale unifiée + fonctions rétrocompatibles
+export {
+  // Fonction principale
+  generateArticle,
+  generateOptimizedArticle,
+
+  // Fonction d'amélioration (rétrocompatibilité)
   improveArticle,
-  IMPROVEMENT_MODELS,
-  IMPROVEMENT_MODES,
+
+  // Types rétrocompatibles
+  type GeneratedArticle,
   type ImprovedArticle,
   type ImprovementModel,
   type ImprovementMode,
   type ImprovementOptions,
-} from "./improve-article";
+
+  // Configs pour l'UI (rétrocompatibilité)
+  IMPROVEMENT_MODELS,
+  IMPROVEMENT_MODES,
+} from "./article";
