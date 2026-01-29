@@ -67,7 +67,7 @@ const INTENTS = {
 
 export default function KeywordGeneratorPage() {
   const [seedKeyword, setSeedKeyword] = useState("");
-  const [selectedCluster, setSelectedCluster] = useState<string>("");
+  const [selectedCluster, setSelectedCluster] = useState<string>("none");
   const [loading, setLoading] = useState(false);
   const [keywords, setKeywords] = useState<GeneratedKeyword[]>([]);
   const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
@@ -106,7 +106,7 @@ export default function KeywordGeneratorPage() {
       } else {
         result = await generateAllKeywords(seedKeyword, {
           ...options,
-          cluster: selectedCluster || undefined,
+          cluster: selectedCluster === "none" ? undefined : selectedCluster,
         });
       }
 
@@ -263,7 +263,7 @@ export default function KeywordGeneratorPage() {
                     <SelectValue placeholder="Sélectionner un cluster" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucun</SelectItem>
+                    <SelectItem value="none">Aucun</SelectItem>
                     {CLUSTERS.map(c => (
                       <SelectItem key={c.value} value={c.value}>
                         {c.label}
