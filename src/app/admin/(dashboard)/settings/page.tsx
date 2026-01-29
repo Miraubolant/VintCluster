@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ProfileSettings, PasswordSettings } from "@/components/admin/settings";
+import { ProfileSettings, PasswordSettings, PromptSettings } from "@/components/admin/settings";
 import { Settings, Shield } from "lucide-react";
 
 export default async function SettingsPage() {
@@ -27,6 +27,9 @@ export default async function SettingsPage() {
         <ProfileSettings email={user.email || ""} />
         <PasswordSettings />
       </div>
+
+      {/* Configuration des prompts IA */}
+      <PromptSettings />
 
       {/* Section informative sur les clés API */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
