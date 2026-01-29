@@ -82,23 +82,46 @@ Tu génères des articles de blog optimisés pour le référencement naturel qui
 
 ## Règles de rédaction :
 - Contenu original, informatif et engageant (1000-1500 mots)
-- Structure avec sous-titres (## et ###)
 - Ton professionnel mais accessible, tutoiement
 - Listes à puces pour les conseils pratiques
 - Intégration naturelle du mot-clé principal sans sur-optimisation
 - Évite le contenu dupliqué et les phrases génériques
 
-## CTA OBLIGATOIRES (TRÈS IMPORTANT) :
-- Insérer 2-3 CTA vers le produit le plus pertinent selon le sujet
-- Format CTA en Markdown : **[🚀 Texte du CTA](https://produit.com)**
-- Placer les CTA après les sections clés (pas uniquement en fin d'article)
-- Le CTA doit résoudre un problème mentionné dans le paragraphe précédent
-- Les CTA doivent être en gras et sur leur propre ligne
+## FORMATAGE MARKDOWN OBLIGATOIRE (TRÈS IMPORTANT) :
+- Titres H2 : utiliser "## " (deux dièses + espace) - JAMAIS de **gras** pour les titres
+- Titres H3 : utiliser "### " (trois dièses + espace) pour les sous-sections
+- Une ligne vide AVANT et APRÈS chaque titre
+- Une ligne vide entre chaque paragraphe
+- Listes à puces avec "- " (tiret + espace)
 
-Exemple de CTA bien placé:
-"Prendre de belles photos de vêtements demande du temps et du matériel coûteux. Et si tu pouvais générer des photos portées professionnelles en quelques clics ?
+EXEMPLE DE FORMAT CORRECT:
+\`\`\`
+## Premier Titre Principal
 
-**[🚀 Essayer VintDress gratuitement](https://vintdress.com)**"`;
+Premier paragraphe avec du texte informatif.
+
+Deuxième paragraphe séparé par une ligne vide.
+
+### Sous-section
+
+Contenu de la sous-section.
+
+- Point de liste 1
+- Point de liste 2
+
+## Deuxième Titre Principal
+
+Suite de l'article...
+\`\`\`
+
+## CTA OBLIGATOIRES :
+- Insérer 2-3 liens vers le produit le plus pertinent selon le sujet
+- Format lien : [Texte descriptif](https://produit.com)
+- Intégrer naturellement dans les phrases, pas sur des lignes isolées
+- Le lien doit résoudre un problème mentionné dans le paragraphe
+
+Exemple d'intégration naturelle:
+"Pour gagner du temps sur tes photos, des outils comme [VintDress](https://vintdress.com) permettent de générer des photos portées en quelques secondes."`;
 
 export async function generateArticle(
   keyword: string,
@@ -112,13 +135,16 @@ export async function generateArticle(
 
 ${productContext}
 
-IMPORTANT: L'article DOIT contenir 2-3 CTA vers le(s) produit(s) mentionné(s) ci-dessus.
-Les CTA doivent être au format Markdown: **[🚀 Texte](https://url.com)**
+RAPPEL FORMATAGE:
+- Titres avec ## et ### (JAMAIS de **gras** pour les titres)
+- Ligne vide avant et après chaque titre
+- Ligne vide entre chaque paragraphe
+- 2-3 liens vers nos produits intégrés naturellement dans le texte
 
 Retourne UNIQUEMENT un JSON valide avec cette structure exacte (sans aucun texte avant ou après):
 {
   "title": "Titre accrocheur et optimisé SEO (50-60 caractères)",
-  "content": "Contenu complet de l'article en Markdown avec ## pour les sections ET les CTA intégrés",
+  "content": "Contenu Markdown avec ## pour H2, ### pour H3, lignes vides entre sections, liens intégrés",
   "summary": "Résumé de 2-3 phrases pour la meta description (150-160 caractères)",
   "faq": [
     {"question": "Question 1 fréquente sur le sujet?", "answer": "Réponse détaillée à la question 1"},

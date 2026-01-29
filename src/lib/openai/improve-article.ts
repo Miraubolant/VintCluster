@@ -299,10 +299,40 @@ Transforme cet article en suivant TOUTES les directives du système.
 Garde le sujet principal mais enrichis MASSIVEMENT le contenu.
 OBJECTIF: 2500-3000 MOTS minimum. Développe chaque section en profondeur.
 
+## FORMATAGE MARKDOWN OBLIGATOIRE
+
+CRITIQUE: Le contenu DOIT utiliser la syntaxe Markdown correcte pour les titres :
+- Titres H2 : commencer la ligne par "## " (deux dièses + espace)
+- Titres H3 : commencer la ligne par "### " (trois dièses + espace)
+- JAMAIS de **gras** pour les titres, TOUJOURS ## ou ###
+- Une ligne vide AVANT et APRÈS chaque titre
+- Une ligne vide entre chaque paragraphe
+
+EXEMPLE DE FORMAT CORRECT:
+\`\`\`
+## Titre de Section Principal
+
+Premier paragraphe avec du texte. Phrase suivante ici.
+
+Deuxième paragraphe séparé par une ligne vide.
+
+### Sous-titre de la Section
+
+Contenu de la sous-section ici.
+
+- Point de liste 1
+- Point de liste 2
+- Point de liste 3
+
+## Prochaine Section Principale
+
+Etc.
+\`\`\`
+
 Retourne UNIQUEMENT un JSON valide:
 {
   "title": "Titre SEO optimisé (50-65 caractères, avec mot-clé principal)",
-  "content": "Contenu Markdown LONG et DÉTAILLÉ (2500-3000 mots, ## pour H2, ### pour H3, listes, tableaux)",
+  "content": "Contenu Markdown avec ## pour H2, ### pour H3, lignes vides entre sections (2500-3000 mots)",
   "summary": "Meta description accrocheuse (150-160 caractères)",
   "faq": [
     {"question": "Question 1?", "answer": "Réponse complète avec données (60-100 mots)"},
