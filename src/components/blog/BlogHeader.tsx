@@ -3,22 +3,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { useTemplate, HEADER_STYLES, isLightColor } from "./TemplateContext";
 
 interface BlogHeaderProps {
   siteName: string;
   primaryColor: string;
   secondaryColor?: string;
   logoUrl?: string | null;
-}
-
-// Determine if color is light or dark to choose text color
-function isLightColor(color: string): boolean {
-  const hex = color.replace("#", "");
-  const r = parseInt(hex.substr(0, 2), 16);
-  const g = parseInt(hex.substr(2, 2), 16);
-  const b = parseInt(hex.substr(4, 2), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 128;
 }
 
 // Get initials from site name (max 2 characters)
@@ -32,6 +23,7 @@ function getInitials(name: string): string {
 
 export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: BlogHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
+  const { template } = useTemplate();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -42,23 +34,16 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
   const secondary = secondaryColor || "#000000";
   const isLight = isLightColor(primaryColor);
   const initials = getInitials(siteName);
+  const styles = HEADER_STYLES[template];
 
   return (
-    <header className="relative">
+    <header className={styles.container}>
       {/* Top accent bar */}
-      <div
-        className="h-2"
-        style={{
-          background: `repeating-linear-gradient(90deg, ${primaryColor} 0px, ${primaryColor} 20px, ${secondary} 20px, ${secondary} 40px)`
-        }}
-      />
+      <div style={styles.topBar(primaryColor, secondary)} />
 
       <div
-        className={`
-          relative border-b-[5px] border-black transition-all duration-300
-          ${scrolled ? "py-3" : "py-5"}
-        `}
-        style={{ backgroundColor: primaryColor }}
+        className={styles.wrapper(scrolled, primaryColor)}
+        style={styles.wrapperStyle(primaryColor)}
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between gap-4">
@@ -66,7 +51,7 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
             <Link href="/" className="group flex items-center gap-4">
               {logoUrl ? (
                 // If logo URL is provided, show the image
-                <div className="relative w-12 h-12 border-[4px] border-black bg-white overflow-hidden">
+                <div className={`relative w-12 h-12 overflow-hidden ${template === "brutal" ? "border-[4px] border-black bg-white" : template === "minimal" ? "rounded-full" : template === "tech" ? "rounded-lg" : template === "fresh" ? "rounded-2xl shadow-md" : "border-2 border-gray-900"}`}>
                   <Image
                     src={logoUrl}
                     alt={siteName}
@@ -77,11 +62,11 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
               ) : (
                 // Geometric initials badge
                 <div
-                  className="w-12 h-12 border-[4px] border-black flex items-center justify-center rotate-0 group-hover:rotate-6 transition-transform"
+                  className={styles.logoContainer}
                   style={{ backgroundColor: secondary }}
                 >
                   <span
-                    className="font-black text-lg tracking-tight"
+                    className={`font-bold ${template === "brutal" ? "font-black text-lg tracking-tight" : template === "tech" ? "font-mono text-sm" : "text-sm"}`}
                     style={{ color: isLightColor(secondary) ? "#000" : "#FFF" }}
                   >
                     {initials}
@@ -89,23 +74,23 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
                 </div>
               )}
 
-              {/* Site name with shadow effect */}
+              {/* Site name */}
               <div className="relative">
-                <div
-                  className="absolute top-1 left-1 -z-10"
-                  aria-hidden="true"
-                >
-                  <span
-                    className={`font-black uppercase tracking-tight ${scrolled ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"}`}
-                    style={{ color: secondary, opacity: 0.3 }}
+                {/* Shadow effect for brutal template */}
+                {template === "brutal" && (
+                  <div
+                    className="absolute top-1 left-1 -z-10"
+                    aria-hidden="true"
                   >
-                    {siteName}
-                  </span>
-                </div>
-                <span
-                  className={`font-black uppercase tracking-tight transition-all ${scrolled ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"}`}
-                  style={{ color: isLight ? "#000" : "#FFF" }}
-                >
+                    <span
+                      className={`font-black uppercase tracking-tight ${scrolled ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"}`}
+                      style={{ color: secondary, opacity: 0.3 }}
+                    >
+                      {siteName}
+                    </span>
+                  </div>
+                )}
+                <span className={styles.logoText(scrolled, isLight)}>
                   {siteName}
                 </span>
               </div>
@@ -115,8 +100,8 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
             <nav>
               <Link
                 href="/blog"
-                className="group relative px-5 py-2 font-black uppercase text-sm tracking-wider bg-black text-white border-[4px] border-black transition-all hover:shadow-[4px_4px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5"
-                style={{ "--tw-shadow-color": secondary } as React.CSSProperties}
+                className={styles.navButton}
+                style={styles.navButtonStyle(secondary)}
               >
                 Blog
               </Link>
@@ -126,7 +111,7 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
       </div>
 
       {/* Bottom accent line */}
-      <div className="h-[3px] bg-black" />
+      {styles.bottomBar && <div className={styles.bottomBar} />}
     </header>
   );
 }

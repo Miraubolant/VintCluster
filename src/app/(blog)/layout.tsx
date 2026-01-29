@@ -2,6 +2,8 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getSiteByDomain } from "@/lib/actions/blog";
 import { BlogHeader, BlogFooter } from "@/components/blog";
+import { TemplateProvider } from "@/components/blog/TemplateContext";
+import type { SiteTemplate } from "@/types/database";
 
 export default async function BlogLayout({
   children,
@@ -30,33 +32,79 @@ export default async function BlogLayout({
   const primaryColor = site?.primary_color || "#FFE500";
   const secondaryColor = site?.secondary_color || "#000000";
   const logoUrl = site?.logo_url || null;
+  const template = (site?.template as SiteTemplate) || "brutal";
+
+  // Background styles per template
+  const getBackgroundStyles = () => {
+    switch (template) {
+      case "minimal":
+        return {
+          className: "min-h-screen flex flex-col bg-white",
+          pattern: null,
+        };
+      case "magazine":
+        return {
+          className: "min-h-screen flex flex-col bg-gray-50",
+          pattern: null,
+        };
+      case "tech":
+        return {
+          className: "min-h-screen flex flex-col bg-slate-950",
+          pattern: {
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99,102,241,0.15) 1px, transparent 0)`,
+            backgroundSize: "32px 32px",
+          },
+        };
+      case "fresh":
+        return {
+          className: "min-h-screen flex flex-col bg-gradient-to-br from-orange-50 via-white to-pink-50",
+          pattern: null,
+        };
+      case "brutal":
+      default:
+        return {
+          className: "min-h-screen flex flex-col bg-gray-100",
+          pattern: {
+            backgroundImage: `
+              linear-gradient(${primaryColor} 1px, transparent 1px),
+              linear-gradient(90deg, ${primaryColor} 1px, transparent 1px)
+            `,
+            backgroundSize: "40px 40px",
+          },
+        };
+    }
+  };
+
+  const bgStyles = getBackgroundStyles();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100">
-      {/* Subtle grid pattern background */}
-      <div
-        className="fixed inset-0 pointer-events-none opacity-[0.02] z-0"
-        style={{
-          backgroundImage: `
-            linear-gradient(${primaryColor} 1px, transparent 1px),
-            linear-gradient(90deg, ${primaryColor} 1px, transparent 1px)
-          `,
-          backgroundSize: '40px 40px'
-        }}
-      />
+    <TemplateProvider
+      template={template}
+      primaryColor={primaryColor}
+      secondaryColor={secondaryColor}
+    >
+      <div className={bgStyles.className}>
+        {/* Background pattern */}
+        {bgStyles.pattern && (
+          <div
+            className="fixed inset-0 pointer-events-none opacity-[0.02] z-0"
+            style={bgStyles.pattern}
+          />
+        )}
 
-      <BlogHeader
-        siteName={siteName}
-        primaryColor={primaryColor}
-        secondaryColor={secondaryColor}
-        logoUrl={logoUrl}
-      />
-      <main className="flex-1 relative z-10">{children}</main>
-      <BlogFooter
-        siteName={siteName}
-        primaryColor={primaryColor}
-        secondaryColor={secondaryColor}
-      />
-    </div>
+        <BlogHeader
+          siteName={siteName}
+          primaryColor={primaryColor}
+          secondaryColor={secondaryColor}
+          logoUrl={logoUrl}
+        />
+        <main className="flex-1 relative z-10">{children}</main>
+        <BlogFooter
+          siteName={siteName}
+          primaryColor={primaryColor}
+          secondaryColor={secondaryColor}
+        />
+      </div>
+    </TemplateProvider>
   );
 }

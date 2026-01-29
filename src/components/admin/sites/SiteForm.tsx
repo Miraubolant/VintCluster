@@ -5,9 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Sparkles, Loader2, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
-import type { Site } from "@/types/database";
+import type { Site, SiteTemplate } from "@/types/database";
+import { TEMPLATES } from "@/types/database";
 import type { SiteFormData } from "@/lib/actions/sites";
 import { generateSiteSEO, generateFavicon } from "@/lib/actions/sites";
 
@@ -28,6 +36,7 @@ export function SiteForm({ site, onSubmit, onCancel, loading }: SiteFormProps) {
     secondary_color: site?.secondary_color || "#FFFFFF",
     meta_title: site?.meta_title || "",
     meta_description: site?.meta_description || "",
+    template: (site?.template as SiteTemplate) || "brutal",
   });
 
   const [generatingSEO, setGeneratingSEO] = useState(false);
@@ -216,6 +225,32 @@ export function SiteForm({ site, onSubmit, onCancel, loading }: SiteFormProps) {
             />
           </div>
         </div>
+      </div>
+
+      {/* Template Selection */}
+      <div className="space-y-2">
+        <Label htmlFor="template">Template du blog</Label>
+        <Select
+          value={formData.template || "brutal"}
+          onValueChange={(value) => setFormData({ ...formData, template: value as SiteTemplate })}
+        >
+          <SelectTrigger id="template" className="w-full">
+            <SelectValue placeholder="Sélectionner un template" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(TEMPLATES).map(([key, template]) => (
+              <SelectItem key={key} value={key}>
+                <div className="flex flex-col">
+                  <span className="font-medium">{template.name}</span>
+                  <span className="text-xs text-gray-500">{template.description}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-gray-500">
+          Affecte le style visuel du blog public et le ton des articles générés
+        </p>
       </div>
 
       {/* SEO Section with AI button */}

@@ -18,6 +18,7 @@ const siteSchema = z.object({
   secondary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Couleur invalide"),
   meta_title: z.string().optional(),
   meta_description: z.string().optional(),
+  template: z.enum(["brutal", "minimal", "magazine", "tech", "fresh"]).optional(),
 });
 
 export type SiteFormData = z.infer<typeof siteSchema>;
@@ -43,6 +44,7 @@ export async function createSite(formData: SiteFormData): Promise<{ data?: Site;
       secondary_color: result.data.secondary_color,
       meta_title: result.data.meta_title || null,
       meta_description: result.data.meta_description || null,
+      template: result.data.template || "brutal",
     })
     .select()
     .single();
@@ -79,6 +81,7 @@ export async function updateSite(id: string, formData: SiteFormData): Promise<{ 
       secondary_color: result.data.secondary_color,
       meta_title: result.data.meta_title || null,
       meta_description: result.data.meta_description || null,
+      template: result.data.template || "brutal",
     })
     .eq("id", id)
     .select()
@@ -375,5 +378,40 @@ export async function generateAndUpdateSiteSEO(
     return { success: true };
   } catch {
     return { success: false, error: "Erreur lors de la génération SEO" };
+  }
+}
+
+/**
+ * Met à jour le template de plusieurs sites en une seule action
+ */
+export async function bulkUpdateSiteTemplate(
+  siteIds: string[],
+  template: "brutal" | "minimal" | "magazine" | "tech" | "fresh"
+): Promise<{ success: boolean; error?: string; updatedCount: number }> {
+  if (siteIds.length === 0) {
+    return { success: false, error: "Aucun site sélectionné", updatedCount: 0 };
+  }
+
+  if (siteIds.length > 100) {
+    return { success: false, error: "Maximum 100 sites à la fois", updatedCount: 0 };
+  }
+
+  try {
+    const supabase = await createClient();
+    const { error, count } = await supabase
+      .from("sites")
+      .update({ template, updated_at: new Date().toISOString() })
+      .in("id", siteIds);
+
+    if (error) {
+      return { success: false, error: error.message, updatedCount: 0 };
+    }
+
+    revalidatePath("/admin/sites");
+
+    return { success: true, updatedCount: count || siteIds.length };
+  } catch (e) {
+    console.error("Erreur bulk update template:", e);
+    return { success: false, error: "Erreur lors de la mise à jour", updatedCount: 0 };
   }
 }

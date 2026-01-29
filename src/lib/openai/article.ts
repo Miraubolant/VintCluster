@@ -1,6 +1,6 @@
 import { getOpenAIClient } from "./client";
 import { generateSlug } from "@/lib/utils/slug";
-import type { FAQItem } from "@/types/database";
+import type { FAQItem, SiteTemplate } from "@/types/database";
 import {
   type ArticleModel,
   type ArticleMode,
@@ -28,6 +28,7 @@ export type ImprovementMode = Exclude<ArticleMode, "basic">;
 export interface ImprovementOptions {
   model: ImprovementModel;
   mode: ImprovementMode;
+  template?: SiteTemplate;
 }
 
 export interface ImprovedArticle {
@@ -85,14 +86,15 @@ export async function generateArticle(
     model = "gpt-4o",
     mode = "basic",
     cluster,
+    template,
   } = options;
 
   const openai = getOpenAIClient();
   const modelConfig = MODELS_CONFIG[model];
   const maxTokens = modelConfig?.maxTokens || 4000;
 
-  // Construire les prompts
-  const systemPrompt = getSystemPrompt(mode);
+  // Construire les prompts (avec template si spécifié)
+  const systemPrompt = getSystemPrompt(mode, template);
   const productContext = getProductContextForCluster(cluster);
   const faqCount = mode === "basic" ? 3 : 6;
   const userPrompt = getUserPrompt(keyword, productContext, mode, faqCount);
@@ -164,8 +166,8 @@ export async function improveArticle(
   const modelConfig = MODELS_CONFIG[options.model];
   const maxTokens = modelConfig?.maxTokens || 16384;
 
-  // Construire les prompts
-  const systemPrompt = getSystemPrompt(options.mode);
+  // Construire les prompts (avec template si spécifié)
+  const systemPrompt = getSystemPrompt(options.mode, options.template);
   const userPrompt = getImprovementPrompt(existingArticle, options.mode);
 
   // Appel API

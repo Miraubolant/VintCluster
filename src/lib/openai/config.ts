@@ -1,4 +1,4 @@
-import type { FAQItem } from "@/types/database";
+import type { FAQItem, SiteTemplate } from "@/types/database";
 
 // ============================================================================
 // TYPES
@@ -19,6 +19,7 @@ export interface GenerationOptions {
   model?: ArticleModel;
   mode?: ArticleMode;
   cluster?: string;
+  template?: SiteTemplate;
 }
 
 // ============================================================================

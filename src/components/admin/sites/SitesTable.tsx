@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { MoreHorizontal, Pencil, Trash2, ExternalLink, Sparkles, X } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, ExternalLink, Sparkles, X, Palette, ChevronDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -18,13 +18,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteSiteDialog } from "./DeleteSiteDialog";
-import { generateAndUpdateSiteSEO } from "@/lib/actions/sites";
+import { generateAndUpdateSiteSEO, bulkUpdateSiteTemplate } from "@/lib/actions/sites";
 import { toast } from "sonner";
-import type { Site } from "@/types/database";
+import type { Site, SiteTemplate } from "@/types/database";
+import { TEMPLATES } from "@/types/database";
 
 interface SiteWithStats extends Site {
   keywordsCount: number;
@@ -46,6 +54,8 @@ interface BulkProgress {
 export function SitesTable({ sites }: SitesTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<SiteTemplate>("brutal");
+  const [updatingTemplate, setUpdatingTemplate] = useState(false);
   const [progress, setProgress] = useState<BulkProgress>({
     isRunning: false,
     current: 0,
@@ -140,6 +150,26 @@ export function SitesTable({ sites }: SitesTableProps) {
     cancelledRef.current = true;
   };
 
+  // Handle bulk template update
+  const handleBulkUpdateTemplate = async () => {
+    if (selectedIds.length === 0) return;
+
+    setUpdatingTemplate(true);
+    const result = await bulkUpdateSiteTemplate(selectedIds, selectedTemplate);
+    setUpdatingTemplate(false);
+
+    if (!result.success) {
+      toast.error(result.error || "Erreur lors de la mise à jour");
+      return;
+    }
+
+    toast.success(`Template "${TEMPLATES[selectedTemplate].name}" appliqué à ${result.updatedCount} site(s)`);
+    setSelectedIds([]);
+
+    // Force refresh
+    window.location.reload();
+  };
+
   return (
     <>
       {/* Bulk Actions Bar */}
@@ -159,6 +189,35 @@ export function SitesTable({ sites }: SitesTableProps) {
             </Button>
           </div>
           <div className="flex items-center gap-2">
+            {/* Template selector */}
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedTemplate}
+                onValueChange={(value) => setSelectedTemplate(value as SiteTemplate)}
+              >
+                <SelectTrigger className="w-[160px] h-9 text-sm">
+                  <SelectValue placeholder="Template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TEMPLATES).map(([key, template]) => (
+                    <SelectItem key={key} value={key}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkUpdateTemplate}
+                disabled={updatingTemplate}
+                className="text-purple-700 border-purple-300 hover:bg-purple-100"
+              >
+                <Palette className="h-4 w-4 mr-1" />
+                {updatingTemplate ? "..." : "Appliquer"}
+              </Button>
+            </div>
+            <div className="w-px h-6 bg-indigo-200" />
             <Button
               variant="outline"
               size="sm"
@@ -222,6 +281,7 @@ export function SitesTable({ sites }: SitesTableProps) {
               <TableHead className="font-semibold text-gray-700">Domaine</TableHead>
               <TableHead className="font-semibold text-gray-700 text-center">Mots-clés</TableHead>
               <TableHead className="font-semibold text-gray-700 text-center">Articles</TableHead>
+              <TableHead className="font-semibold text-gray-700">Template</TableHead>
               <TableHead className="font-semibold text-gray-700">Couleurs</TableHead>
               <TableHead className="font-semibold text-gray-700">SEO</TableHead>
               <TableHead className="w-[50px]"></TableHead>
@@ -262,6 +322,21 @@ export function SitesTable({ sites }: SitesTableProps) {
                 <TableCell className="text-center">
                   <Badge variant="secondary" className="bg-green-100 text-green-700">
                     {site.articlesCount}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant="secondary"
+                    className={
+                      site.template === "brutal" ? "bg-orange-100 text-orange-700" :
+                      site.template === "minimal" ? "bg-slate-100 text-slate-700" :
+                      site.template === "magazine" ? "bg-rose-100 text-rose-700" :
+                      site.template === "tech" ? "bg-cyan-100 text-cyan-700" :
+                      site.template === "fresh" ? "bg-lime-100 text-lime-700" :
+                      "bg-gray-100 text-gray-700"
+                    }
+                  >
+                    {site.template ? TEMPLATES[site.template as SiteTemplate]?.name || site.template : "Brutal"}
                   </Badge>
                 </TableCell>
                 <TableCell>

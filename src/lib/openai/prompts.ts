@@ -1,4 +1,6 @@
 import { BASE_CONTEXT, MARKDOWN_INSTRUCTIONS, type ArticleMode } from "./config";
+import { getTemplateContext } from "./template-styles";
+import type { SiteTemplate } from "@/types/database";
 
 // ============================================================================
 // PROMPT MODE BASIQUE (génération rapide)
@@ -128,18 +130,36 @@ ${MARKDOWN_INSTRUCTIONS}`;
 // SÉLECTEUR DE PROMPT
 // ============================================================================
 
-export function getSystemPrompt(mode: ArticleMode): string {
+export function getSystemPrompt(mode: ArticleMode, template?: SiteTemplate): string {
+  let basePrompt: string;
+
   switch (mode) {
     case "basic":
-      return BASIC_PROMPT;
+      basePrompt = BASIC_PROMPT;
+      break;
     case "seo-classic":
-      return SEO_CLASSIC_PROMPT;
+      basePrompt = SEO_CLASSIC_PROMPT;
+      break;
     case "ai-search":
-      return AI_SEARCH_PROMPT;
+      basePrompt = AI_SEARCH_PROMPT;
+      break;
     case "full-pbn":
     default:
-      return FULL_PBN_PROMPT;
+      basePrompt = FULL_PBN_PROMPT;
+      break;
   }
+
+  // Si un template est spécifié, ajouter les instructions de style
+  if (template) {
+    const templateContext = getTemplateContext(template);
+    return `${basePrompt}
+
+---
+
+${templateContext}`;
+  }
+
+  return basePrompt;
 }
 
 // ============================================================================

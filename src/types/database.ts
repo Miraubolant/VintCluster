@@ -33,3 +33,114 @@ export interface FAQItem {
 // Types pour l'amélioration IA (scheduler)
 export type SchedulerImprovementModel = "gpt-4o" | "gpt-4o-mini" | "gpt-4-turbo";
 export type SchedulerImprovementMode = "seo-classic" | "ai-search" | "full-pbn";
+
+// Types pour les templates de site
+export type SiteTemplate = "brutal" | "minimal" | "magazine" | "tech" | "fresh";
+
+export interface TemplateConfig {
+  id: SiteTemplate;
+  name: string;
+  description: string;
+  // Style visuel
+  visual: {
+    headerStyle: "bold" | "minimal" | "editorial" | "modern" | "playful";
+    cardStyle: "brutal" | "clean" | "rich" | "gradient" | "rounded";
+    footerStyle: "simple" | "compact" | "detailed" | "modern" | "fun";
+  };
+  // Style de contenu IA
+  content: {
+    tone: "direct" | "elegant" | "journalistic" | "expert" | "casual";
+    formality: "tu" | "vous";
+    useEmojis: boolean;
+    structureStyle: "lists" | "paragraphs" | "mixed" | "technical" | "conversational";
+    ctaStyle: "bold" | "subtle" | "editorial" | "technical" | "playful";
+  };
+}
+
+export const TEMPLATES: Record<SiteTemplate, TemplateConfig> = {
+  brutal: {
+    id: "brutal",
+    name: "Brutal",
+    description: "Néo-brutaliste avec bordures épaisses et ombres décalées",
+    visual: {
+      headerStyle: "bold",
+      cardStyle: "brutal",
+      footerStyle: "simple",
+    },
+    content: {
+      tone: "direct",
+      formality: "tu",
+      useEmojis: true,
+      structureStyle: "lists",
+      ctaStyle: "bold",
+    },
+  },
+  minimal: {
+    id: "minimal",
+    name: "Minimal",
+    description: "Ultra clean avec beaucoup d'espace blanc",
+    visual: {
+      headerStyle: "minimal",
+      cardStyle: "clean",
+      footerStyle: "compact",
+    },
+    content: {
+      tone: "elegant",
+      formality: "vous",
+      useEmojis: false,
+      structureStyle: "paragraphs",
+      ctaStyle: "subtle",
+    },
+  },
+  magazine: {
+    id: "magazine",
+    name: "Magazine",
+    description: "Style éditorial avec grandes images",
+    visual: {
+      headerStyle: "editorial",
+      cardStyle: "rich",
+      footerStyle: "detailed",
+    },
+    content: {
+      tone: "journalistic",
+      formality: "vous",
+      useEmojis: false,
+      structureStyle: "mixed",
+      ctaStyle: "editorial",
+    },
+  },
+  tech: {
+    id: "tech",
+    name: "Tech",
+    description: "Moderne avec gradients subtils",
+    visual: {
+      headerStyle: "modern",
+      cardStyle: "gradient",
+      footerStyle: "modern",
+    },
+    content: {
+      tone: "expert",
+      formality: "tu",
+      useEmojis: false,
+      structureStyle: "technical",
+      ctaStyle: "technical",
+    },
+  },
+  fresh: {
+    id: "fresh",
+    name: "Fresh",
+    description: "Coloré et dynamique pour un public jeune",
+    visual: {
+      headerStyle: "playful",
+      cardStyle: "rounded",
+      footerStyle: "fun",
+    },
+    content: {
+      tone: "casual",
+      formality: "tu",
+      useEmojis: true,
+      structureStyle: "conversational",
+      ctaStyle: "playful",
+    },
+  },
+};
