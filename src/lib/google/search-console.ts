@@ -40,22 +40,32 @@ function hasCredentials(): boolean {
   );
 }
 
-// Formater la clé privée (gère les deux formats: \n échappé ou vrais sauts de ligne)
+// Formater la clé privée (gère tous les formats possibles)
 function formatPrivateKey(key: string | undefined): string {
   if (!key) return "";
 
-  // Si la clé contient des \n littéraux (échappés), les remplacer par de vrais sauts de ligne
-  // Sinon, la clé a déjà de vrais sauts de ligne (Coolify multiline)
   let formattedKey = key;
 
-  // Remplacer les \n échappés par de vrais sauts de ligne
-  if (key.includes("\\n")) {
-    formattedKey = key.replace(/\\n/g, "\n");
+  // Cas 1: La clé contient des séquences \n littérales (backslash + n comme 2 caractères)
+  // Cela arrive quand Coolify stocke "\\n" ou quand on colle la clé avec \n visible
+  if (formattedKey.includes("\\n")) {
+    formattedKey = formattedKey.split("\\n").join("\n");
   }
+
+  // Cas 2: La clé pourrait avoir des \\n échappés deux fois
+  if (formattedKey.includes("\\\\n")) {
+    formattedKey = formattedKey.split("\\\\n").join("\n");
+  }
+
+  // Cas 3: Vérifier si la clé a déjà des vrais sauts de ligne (Coolify multiline)
+  // Dans ce cas, on ne fait rien de plus
+
+  // Nettoyer les guillemets potentiels au début/fin
+  formattedKey = formattedKey.replace(/^["']|["']$/g, "");
 
   // S'assurer que la clé a le bon format
   if (!formattedKey.includes("-----BEGIN PRIVATE KEY-----")) {
-    console.error("Invalid private key format");
+    console.error("Invalid private key format. Key starts with:", formattedKey.substring(0, 50));
   }
 
   return formattedKey;
