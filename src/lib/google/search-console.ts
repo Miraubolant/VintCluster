@@ -40,16 +40,39 @@ function hasCredentials(): boolean {
   );
 }
 
+// Formater la clé privée (gère les deux formats: \n échappé ou vrais sauts de ligne)
+function formatPrivateKey(key: string | undefined): string {
+  if (!key) return "";
+
+  // Si la clé contient des \n littéraux (échappés), les remplacer par de vrais sauts de ligne
+  // Sinon, la clé a déjà de vrais sauts de ligne (Coolify multiline)
+  let formattedKey = key;
+
+  // Remplacer les \n échappés par de vrais sauts de ligne
+  if (key.includes("\\n")) {
+    formattedKey = key.replace(/\\n/g, "\n");
+  }
+
+  // S'assurer que la clé a le bon format
+  if (!formattedKey.includes("-----BEGIN PRIVATE KEY-----")) {
+    console.error("Invalid private key format");
+  }
+
+  return formattedKey;
+}
+
 // Créer le client authentifié
 async function getSearchConsoleClient() {
   if (!hasCredentials()) {
     throw new Error("Google Search Console credentials not configured");
   }
 
+  const privateKey = formatPrivateKey(process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY);
+
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      private_key: privateKey,
     },
     scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
   });
