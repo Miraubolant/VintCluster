@@ -288,7 +288,7 @@ ${existingArticle.content}
 
 **Résumé actuel:** ${existingArticle.summary || "Aucun résumé"}
 
-**FAQ actuelle:**
+**FAQ actuelle (pour référence uniquement, NE PAS COPIER):**
 ${existingFaqFormatted}
 
 ---
@@ -298,6 +298,10 @@ ${existingFaqFormatted}
 Transforme cet article en suivant TOUTES les directives du système.
 Garde le sujet principal mais enrichis MASSIVEMENT le contenu.
 OBJECTIF: 2500-3000 MOTS minimum. Développe chaque section en profondeur.
+
+## FAQ - IMPORTANT
+Génère 6 NOUVELLES questions FAQ pertinentes. NE COPIE PAS les questions existantes ci-dessus.
+Crée des questions DIFFÉRENTES et ORIGINALES basées sur le nouveau contenu amélioré.
 
 ## FORMATAGE MARKDOWN OBLIGATOIRE
 
@@ -335,12 +339,12 @@ Retourne UNIQUEMENT un JSON valide:
   "content": "Contenu Markdown avec ## pour H2, ### pour H3, lignes vides entre sections (2500-3000 mots)",
   "summary": "Meta description accrocheuse (150-160 caractères)",
   "faq": [
-    {"question": "Question 1?", "answer": "Réponse complète avec données (60-100 mots)"},
-    {"question": "Question 2?", "answer": "Réponse complète avec données (60-100 mots)"},
-    {"question": "Question 3?", "answer": "Réponse complète avec données (60-100 mots)"},
-    {"question": "Question 4?", "answer": "Réponse complète avec données (60-100 mots)"},
-    {"question": "Question 5?", "answer": "Réponse complète avec données (60-100 mots)"},
-    {"question": "Question 6?", "answer": "Réponse complète avec données (60-100 mots)"}
+    {"question": "NOUVELLE question 1 (différente de l'existante)?", "answer": "Réponse complète (60-100 mots)"},
+    {"question": "NOUVELLE question 2 (différente de l'existante)?", "answer": "Réponse complète (60-100 mots)"},
+    {"question": "NOUVELLE question 3 (différente de l'existante)?", "answer": "Réponse complète (60-100 mots)"},
+    {"question": "NOUVELLE question 4 (différente de l'existante)?", "answer": "Réponse complète (60-100 mots)"},
+    {"question": "NOUVELLE question 5 (différente de l'existante)?", "answer": "Réponse complète (60-100 mots)"},
+    {"question": "NOUVELLE question 6 (différente de l'existante)?", "answer": "Réponse complète (60-100 mots)"}
   ]
 }`;
 
