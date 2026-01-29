@@ -319,18 +319,21 @@ Retourne UNIQUEMENT un JSON valide:
     throw new Error("Titre invalide ou trop court");
   }
 
-  if (!parsed.content || parsed.content.length < 2000) {
+  if (!parsed.content || parsed.content.length < 1500) {
     throw new Error("Contenu trop court (minimum attendu non atteint)");
   }
 
-  if (!parsed.faq || parsed.faq.length < 5) {
-    throw new Error("FAQ insuffisante (minimum 5 questions attendues)");
-  }
+  // Use existing FAQ if new one is insufficient
+  const finalFaq = parsed.faq && parsed.faq.length >= 3
+    ? parsed.faq
+    : (existingArticle.faq && existingArticle.faq.length > 0
+        ? existingArticle.faq
+        : parsed.faq || []);
 
   return {
     title: parsed.title,
     content: parsed.content,
     summary: parsed.summary || existingArticle.summary,
-    faq: parsed.faq,
+    faq: finalFaq,
   };
 }
