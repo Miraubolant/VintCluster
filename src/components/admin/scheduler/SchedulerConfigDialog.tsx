@@ -22,8 +22,10 @@ import {
 } from "@/components/ui/select";
 import { upsertSchedulerConfig, getAvailableKeywordsForScheduler } from "@/lib/actions/scheduler";
 import { IMPROVEMENT_MODELS, IMPROVEMENT_MODES, type ImprovementModel, type ImprovementMode } from "@/lib/openai";
+import type { SEOModel } from "@/lib/actions/articles";
 import { toast } from "sonner";
-import { ImageIcon, Search, Tag, Sparkles, Calendar, Clock, Power, Loader2, Settings2, Save } from "lucide-react";
+import { ImageIcon, Search, Tag, Sparkles, Calendar, Clock, Power, Loader2, Settings2, Save, Zap, Table2 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { Site, SchedulerConfig } from "@/types/database";
 
 interface SchedulerConfigWithSite extends SchedulerConfig {
@@ -86,6 +88,10 @@ export function SchedulerConfigDialog({
   const [enableImprovement, setEnableImprovement] = useState(false);
   const [improvementModel, setImprovementModel] = useState<ImprovementModel>("gpt-4o");
   const [improvementMode, setImprovementMode] = useState<ImprovementMode>("full-pbn");
+  // Options SEO Expert
+  const [enableSeoExpert, setEnableSeoExpert] = useState(false);
+  const [seoExpertModel, setSeoExpertModel] = useState<SEOModel>("gemini");
+  const [seoExpertIncludeTable, setSeoExpertIncludeTable] = useState(false);
 
   // Charger les keywords disponibles quand le site change
   useEffect(() => {
@@ -118,6 +124,10 @@ export function SchedulerConfigDialog({
       setEnableImprovement((config as unknown as { enable_improvement?: boolean }).enable_improvement || false);
       setImprovementModel(((config as unknown as { improvement_model?: string }).improvement_model as ImprovementModel) || "gpt-4o");
       setImprovementMode(((config as unknown as { improvement_mode?: string }).improvement_mode as ImprovementMode) || "full-pbn");
+      // Options SEO Expert
+      setEnableSeoExpert((config as unknown as { enable_seo_expert?: boolean }).enable_seo_expert || false);
+      setSeoExpertModel(((config as unknown as { seo_expert_model?: string }).seo_expert_model as SEOModel) || "gemini");
+      setSeoExpertIncludeTable((config as unknown as { seo_expert_include_table?: boolean }).seo_expert_include_table || false);
     } else {
       setSelectedSiteId("");
       setEnabled(true);
@@ -130,6 +140,9 @@ export function SchedulerConfigDialog({
       setEnableImprovement(false);
       setImprovementModel("gpt-4o");
       setImprovementMode("full-pbn");
+      setEnableSeoExpert(false);
+      setSeoExpertModel("gemini");
+      setSeoExpertIncludeTable(false);
     }
     setKeywordSearch("");
   }, [config, open]);
@@ -193,6 +206,9 @@ export function SchedulerConfigDialog({
       enable_improvement: enableImprovement,
       improvement_model: improvementModel,
       improvement_mode: improvementMode,
+      enable_seo_expert: enableSeoExpert,
+      seo_expert_model: seoExpertModel,
+      seo_expert_include_table: seoExpertIncludeTable,
     });
 
     setLoading(false);
@@ -441,7 +457,96 @@ export function SchedulerConfigDialog({
             </div>
           </section>
 
-          {/* Section 4: Mots-cles */}
+          {/* Section 4: SEO Expert */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              <Zap className="h-4 w-4 text-emerald-500" />
+              SEO Expert
+            </div>
+
+            <div className={`p-4 rounded-lg border transition-colors ${
+              enableSeoExpert ? "bg-emerald-50/50 border-emerald-200" : "bg-gray-50 border-gray-100"
+            }`}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <Label className="text-sm font-medium">Activer SEO Expert</Label>
+                  <p className="text-xs text-gray-500">
+                    Reecriture complete avec prompt SEO ultra-optimise
+                  </p>
+                </div>
+                <Switch checked={enableSeoExpert} onCheckedChange={setEnableSeoExpert} />
+              </div>
+
+              {enableSeoExpert && (
+                <div className="space-y-4 pt-3 border-t border-emerald-200">
+                  {/* Choix du modele */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-gray-600">Modele IA</Label>
+                    <RadioGroup
+                      value={seoExpertModel}
+                      onValueChange={(v) => setSeoExpertModel(v as SEOModel)}
+                      className="grid grid-cols-2 gap-2"
+                    >
+                      <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        seoExpertModel === "gemini"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}>
+                        <RadioGroupItem value="gemini" />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-sm">Gemini 2.0 Flash</span>
+                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded">
+                              GRATUIT
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-gray-500">~$0.002/article</p>
+                        </div>
+                      </label>
+
+                      <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        seoExpertModel === "claude"
+                          ? "border-orange-500 bg-orange-50"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}>
+                        <RadioGroupItem value="claude" />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-sm">Claude Sonnet</span>
+                            <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded">
+                              PREMIUM
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-gray-500">~$0.01/article</p>
+                        </div>
+                      </label>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Option tableau comparatif */}
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    seoExpertIncludeTable
+                      ? "border-purple-500 bg-purple-50"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}>
+                    <Checkbox
+                      checked={seoExpertIncludeTable}
+                      onCheckedChange={(checked) => setSeoExpertIncludeTable(checked === true)}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Table2 className="h-4 w-4 text-purple-600" />
+                      <div>
+                        <span className="font-medium text-sm">Inclure un tableau comparatif</span>
+                        <p className="text-[10px] text-gray-500">Tableau Markdown au milieu de l&apos;article</p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Section 5: Mots-cles */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">

@@ -89,6 +89,10 @@ export async function upsertSchedulerConfig(
     enable_improvement?: boolean;
     improvement_model?: string;
     improvement_mode?: string;
+    // SEO Expert options
+    enable_seo_expert?: boolean;
+    seo_expert_model?: "gemini" | "claude";
+    seo_expert_include_table?: boolean;
   }
 ): Promise<{ data?: SchedulerConfig; error?: string }> {
   const supabase = await createClient();
@@ -117,6 +121,9 @@ export async function upsertSchedulerConfig(
         enable_improvement: config.enable_improvement ?? false,
         improvement_model: config.improvement_model ?? "gpt-4o",
         improvement_mode: config.improvement_mode ?? "full-pbn",
+        enable_seo_expert: config.enable_seo_expert ?? false,
+        seo_expert_model: config.seo_expert_model ?? "gemini",
+        seo_expert_include_table: config.seo_expert_include_table ?? false,
         updated_at: new Date().toISOString(),
       })
       .eq("site_id", siteId)
@@ -138,6 +145,9 @@ export async function upsertSchedulerConfig(
         enable_improvement: config.enable_improvement ?? false,
         improvement_model: config.improvement_model ?? "gpt-4o",
         improvement_mode: config.improvement_mode ?? "full-pbn",
+        enable_seo_expert: config.enable_seo_expert ?? false,
+        seo_expert_model: config.seo_expert_model ?? "gemini",
+        seo_expert_include_table: config.seo_expert_include_table ?? false,
       })
       .select()
       .single();
