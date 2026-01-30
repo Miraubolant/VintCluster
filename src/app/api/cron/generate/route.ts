@@ -103,8 +103,11 @@ export async function GET(request: NextRequest) {
     }
 
     let totalGenerated = 0;
+    const skippedReasons: Array<{ site: string; reason: string }> = [];
 
     for (const config of activeConfigs) {
+      const siteName = (config.site as { name: string } | null)?.name || config.site_id;
+
       // Vérifier les limites quotidiennes
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -116,6 +119,7 @@ export async function GET(request: NextRequest) {
         .gte("created_at", todayStart.toISOString());
 
       if ((todayCount || 0) >= (config.max_per_day || 5)) {
+        skippedReasons.push({ site: siteName, reason: `daily_limit_reached (${todayCount}/${config.max_per_day || 5})` });
         continue;
       }
 
@@ -124,6 +128,7 @@ export async function GET(request: NextRequest) {
 
       // Si aucun keyword n'est sélectionné, passer au suivant
       if (keywordIds.length === 0) {
+        skippedReasons.push({ site: siteName, reason: "no_keywords_selected" });
         continue;
       }
 
@@ -138,6 +143,7 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (keywordError || !keyword) {
+        skippedReasons.push({ site: siteName, reason: `no_pending_keywords (${keywordIds.length} selected, none pending)` });
         continue;
       }
 
@@ -235,6 +241,7 @@ export async function GET(request: NextRequest) {
       activeConfigs: activeConfigs.length,
       forced: forceRun,
       serverTime: localTime,
+      skipped: skippedReasons.length > 0 ? skippedReasons : undefined,
     });
   } catch (error) {
     console.error("Cron error:", error);
