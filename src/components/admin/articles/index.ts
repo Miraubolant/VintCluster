@@ -3,6 +3,7 @@ export { ArticlePreviewDialog } from "./ArticlePreviewDialog";
 export { CreateArticleDialog } from "./CreateArticleDialog";
 export { GenerateArticleDialog } from "./GenerateArticleDialog";
 export { EditArticleForm } from "./EditArticleForm";
+export { SEOImproveDialog } from "./SEOImproveDialog";
 
 // Nouveaux composants modulaires
 export { getArticleColumns, ArticleStatusBadge, ArticleThumbnail, STATUS_CONFIG, ARTICLE_STATUS_OPTIONS } from "./ArticleColumns";

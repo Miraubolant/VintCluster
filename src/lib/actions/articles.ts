@@ -810,3 +810,112 @@ export async function improveArticleWithAI(
     return { success: false, error: message };
   }
 }
+
+// Types pour l'amélioration SEO
+export type SEOModel = "gemini" | "claude";
+
+// Améliorer un article avec le prompt SEO expert (Gemini ou Claude)
+export async function improveArticleSEO(
+  articleId: string,
+  model: SEOModel
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  // Récupérer l'article existant avec son keyword
+  const { data: article, error: fetchError } = await supabase
+    .from("articles")
+    .select("id, title, content, summary, faq, status, site_id, slug, keyword:keywords(keyword, cluster)")
+    .eq("id", articleId)
+    .single();
+
+  if (fetchError || !article) {
+    return { success: false, error: "Article non trouvé" };
+  }
+
+  try {
+    let improved;
+
+    const articleInput = {
+      title: article.title,
+      summary: article.summary || "",
+      content: article.content,
+      keyword: (article.keyword as { keyword: string } | null)?.keyword,
+      cluster: (article.keyword as { cluster: string } | null)?.cluster,
+    };
+
+    if (model === "gemini") {
+      // Import dynamique pour éviter les erreurs si le module n'est pas installé
+      const { improveArticleWithGemini } = await import("@/lib/gemini");
+      improved = await improveArticleWithGemini(articleInput);
+    } else {
+      // Claude
+      const { improveArticleWithClaude } = await import("@/lib/anthropic");
+      improved = await improveArticleWithClaude(articleInput);
+    }
+
+    // Mettre à jour l'article (garder le même statut)
+    const { error: updateError } = await supabase
+      .from("articles")
+      .update({
+        title: improved.title,
+        content: improved.content,
+        summary: improved.summary,
+        faq: improved.faq as unknown as Json,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", articleId);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    // Logger l'activité
+    await supabase.from("activity_logs").insert({
+      site_id: article.site_id,
+      type: "article_improved",
+      message: `Article amélioré SEO (${model}): ${improved.title}`,
+      metadata: {
+        article_id: articleId,
+        model,
+        original_title: article.title,
+        improvement_type: "seo-expert"
+      } as unknown as Json,
+    });
+
+    revalidatePath("/admin/articles");
+    revalidatePath(`/admin/articles/${articleId}`);
+
+    // Revalider les pages publiques si l'article est publié
+    if (article.status === "published") {
+      revalidatePath("/");
+      revalidatePath("/blog");
+      revalidatePath(`/blog/${article.slug}`);
+
+      // Soumettre à IndexNow car le contenu a changé
+      const { data: siteData } = await supabase
+        .from("sites")
+        .select("domain")
+        .eq("id", article.site_id)
+        .single();
+
+      if (siteData?.domain) {
+        submitArticleToIndexNow(article.slug, siteData.domain).catch((err) => {
+          console.error("IndexNow submission failed:", err);
+        });
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur d'amélioration SEO";
+    return { success: false, error: message };
+  }
+}
+
+// Vérifier si les APIs sont configurées
+export async function getSEOModelsAvailable(): Promise<{ gemini: boolean; claude: boolean }> {
+  return {
+    gemini: !!process.env.GEMINI_API_KEY,
+    claude: !!process.env.ANTHROPIC_API_KEY,
+  };
+}

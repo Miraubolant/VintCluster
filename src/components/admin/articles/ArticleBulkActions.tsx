@@ -12,6 +12,7 @@ import {
   XCircle,
   Trash2,
   Loader2,
+  Zap,
 } from "lucide-react";
 import type { ArticleStatus } from "@/types/database";
 
@@ -19,6 +20,7 @@ interface ArticleBulkActionsProps {
   onRegenerateImages: () => void;
   onIndexNow: () => void;
   onImprove: () => void;
+  onSEOImprove: () => void;
   onStatusChange: (status: ArticleStatus) => void;
   onDelete: () => void;
   disabled?: boolean;
@@ -29,6 +31,7 @@ export function ArticleBulkActions({
   onRegenerateImages,
   onIndexNow,
   onImprove,
+  onSEOImprove,
   onStatusChange,
   onDelete,
   disabled = false,
@@ -72,8 +75,20 @@ export function ArticleBulkActions({
         className="text-amber-700 border-amber-300 hover:bg-amber-50"
       >
         <Sparkles className="h-4 w-4 mr-1" />
-        <span className="hidden sm:inline">Améliorer IA</span>
+        <span className="hidden sm:inline">Améliorer</span>
         <span className="sm:hidden">IA</span>
+      </Button>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onSEOImprove}
+        disabled={disabled}
+        className="text-emerald-700 border-emerald-300 hover:bg-emerald-50 font-semibold"
+      >
+        <Zap className="h-4 w-4 mr-1" />
+        <span className="hidden sm:inline">SEO Expert</span>
+        <span className="sm:hidden">SEO</span>
       </Button>
 
       <ToolbarDivider />

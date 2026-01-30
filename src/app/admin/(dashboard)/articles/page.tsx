@@ -47,6 +47,7 @@ import {
   ArticlePreviewDialog,
   CreateArticleDialog,
   GenerateArticleDialog,
+  SEOImproveDialog,
   getArticleColumns,
   ArticleRowActions,
   ArticleBulkActions,
@@ -65,6 +66,8 @@ import {
   generateArticleImage,
   bulkSubmitToIndexNow,
   improveArticleWithAI,
+  improveArticleSEO,
+  type SEOModel,
 } from "@/lib/actions/articles";
 import { getSites } from "@/lib/actions/sites";
 
@@ -150,6 +153,8 @@ export default function ArticlesPage() {
   const [previewArticle, setPreviewArticle] = useState<ArticleWithDetails | null>(null);
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const [improveDialogOpen, setImproveDialogOpen] = useState(false);
+  const [seoImproveDialogOpen, setSeoImproveDialogOpen] = useState(false);
+  const [seoImproveLoading, setSeoImproveLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Modèles sélectionnés
@@ -428,6 +433,75 @@ export default function ArticlesPage() {
     loadData();
   };
 
+  const handleBulkSEOImprove = async (model: SEOModel) => {
+    if (table.selectedCount === 0) return;
+
+    setSeoImproveDialogOpen(false);
+    setSeoImproveLoading(true);
+    cancelledRef.current = false;
+
+    const selectedArticles = table.selectedItems;
+
+    setProgress({
+      isRunning: true,
+      total: selectedArticles.length,
+      completed: 0,
+      currentSite: null,
+      errors: [],
+      results: [],
+    });
+
+    for (let i = 0; i < selectedArticles.length; i++) {
+      const article = selectedArticles[i];
+
+      if (cancelledRef.current) {
+        setProgress((prev) => ({
+          ...prev,
+          errors: [...prev.errors, "Annulé par l'utilisateur"],
+        }));
+        break;
+      }
+
+      setProgress((prev) => ({
+        ...prev,
+        currentSite: `SEO Expert (${model}): ${article.title.substring(0, 30)}... (${i + 1}/${selectedArticles.length})`,
+      }));
+
+      const result = await improveArticleSEO(article.id, model);
+
+      if (cancelledRef.current) {
+        if (result.success) {
+          setProgress((prev) => ({
+            ...prev,
+            completed: prev.completed + 1,
+            results: [...prev.results, { siteName: article.site?.name || "Article", title: article.title }],
+            errors: [...prev.errors, "Annulé par l'utilisateur"],
+          }));
+        }
+        break;
+      }
+
+      if (result.success) {
+        setProgress((prev) => ({
+          ...prev,
+          completed: prev.completed + 1,
+          results: [...prev.results, { siteName: article.site?.name || "Article", title: article.title }],
+        }));
+      } else if (result.error) {
+        setProgress((prev) => ({
+          ...prev,
+          errors: [...prev.errors, `${article.title.substring(0, 30)}: ${result.error}`],
+        }));
+      }
+    }
+
+    cancelledRef.current = false;
+    setSeoImproveLoading(false);
+    setProgress((prev) => ({ ...prev, isRunning: false, currentSite: null }));
+    table.clearSelection();
+    loadData();
+  };
+
   // Colonnes avec actions
   const columns = getArticleColumns();
 
@@ -499,6 +573,7 @@ export default function ArticlesPage() {
             onRegenerateImages={() => setRegenerateDialogOpen(true)}
             onIndexNow={handleBulkIndexNow}
             onImprove={() => setImproveDialogOpen(true)}
+            onSEOImprove={() => setSeoImproveDialogOpen(true)}
             onStatusChange={handleBulkStatusChange}
             onDelete={() => setDeleteDialogOpen(true)}
             disabled={bulkLoading || progress.isRunning}
@@ -694,6 +769,15 @@ export default function ArticlesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog amélioration SEO Expert */}
+      <SEOImproveDialog
+        open={seoImproveDialogOpen}
+        onOpenChange={setSeoImproveDialogOpen}
+        selectedCount={table.selectedCount}
+        onConfirm={handleBulkSEOImprove}
+        isLoading={seoImproveLoading}
+      />
     </div>
   );
 }
