@@ -133,16 +133,28 @@ export async function GET(request: NextRequest) {
       }
 
       // Récupérer un mot-clé pending parmi ceux sélectionnés
-      const { data: keyword, error: keywordError } = await supabase
-        .from("keywords")
-        .select("*")
-        .in("id", keywordIds)
-        .eq("status", "pending")
-        .order("priority", { ascending: false })
-        .limit(1)
-        .single();
+      // Note: On utilise une approche par lots pour éviter la limite d'URL Supabase
+      // avec les grands tableaux d'IDs (>100 UUIDs = URL trop longue)
+      let keyword = null;
+      const BATCH_SIZE = 50; // 50 UUIDs par requête pour rester dans les limites
 
-      if (keywordError || !keyword) {
+      for (let i = 0; i < keywordIds.length && !keyword; i += BATCH_SIZE) {
+        const batch = keywordIds.slice(i, i + BATCH_SIZE);
+        const { data: batchKeyword } = await supabase
+          .from("keywords")
+          .select("*")
+          .in("id", batch)
+          .eq("status", "pending")
+          .order("priority", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (batchKeyword) {
+          keyword = batchKeyword;
+        }
+      }
+
+      if (!keyword) {
         skippedReasons.push({ site: siteName, reason: `no_pending_keywords (${keywordIds.length} selected, none pending)` });
         continue;
       }
