@@ -4,6 +4,9 @@ import { generateArticle } from "@/lib/openai";
 import { generateImage, generateImagePrompt } from "@/lib/replicate";
 import type { Database, Json } from "@/types/supabase";
 
+// Fuseau horaire pour le cron (France)
+const TIMEZONE = "Europe/Paris";
+
 // Créer un client Supabase avec service role pour bypasser RLS
 function getServiceClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -16,6 +19,31 @@ function getServiceClient() {
   return createClient<Database>(supabaseUrl, serviceRoleKey);
 }
 
+// Obtenir l'heure et le jour dans le fuseau horaire configuré
+function getLocalTime() {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIMEZONE,
+    hour: "numeric",
+    hour12: false,
+    weekday: "short",
+  });
+
+  const parts = formatter.formatToParts(now);
+  const hourPart = parts.find((p) => p.type === "hour");
+  const weekdayPart = parts.find((p) => p.type === "weekday");
+
+  const hour = hourPart ? parseInt(hourPart.value) : now.getHours();
+
+  // Convertir le jour de la semaine en nombre (0 = Dimanche)
+  const dayMap: Record<string, number> = {
+    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+  };
+  const day = weekdayPart ? dayMap[weekdayPart.value] ?? now.getDay() : now.getDay();
+
+  return { hour, day, timezone: TIMEZONE, utcTime: now.toISOString() };
+}
+
 export async function GET(request: NextRequest) {
   // Vérifier le secret du cron
   const authHeader = request.headers.get("authorization");
@@ -26,9 +54,14 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = getServiceClient();
-  const now = new Date();
-  const currentHour = now.getHours();
-  const currentDay = now.getDay(); // 0 = Dimanche
+
+  // Paramètre force pour bypasser la vérification du temps
+  const forceRun = request.nextUrl.searchParams.get("force") === "true";
+
+  // Utiliser l'heure locale (Europe/Paris)
+  const localTime = getLocalTime();
+  const currentHour = localTime.hour;
+  const currentDay = localTime.day;
 
   try {
     // Récupérer les configurations actives pour l'heure et le jour actuels
@@ -42,7 +75,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: configError.message }, { status: 500 });
     }
 
+    // Filtrer les configs actives pour l'heure et le jour actuels
+    // Si force=true, on prend toutes les configs activées
     const activeConfigs = (configs || []).filter((config) => {
+      if (forceRun) return true; // Bypass le filtre temporel
+
       const days = (config.days_of_week as number[]) || [];
       const hours = (config.publish_hours as number[]) || [];
       return days.includes(currentDay) && hours.includes(currentHour);
@@ -52,6 +89,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         message: "No active configs for current time",
         generated: 0,
+        debug: {
+          serverTime: localTime,
+          currentDay,
+          currentHour,
+          enabledConfigs: (configs || []).map((c) => ({
+            site: (c.site as { name: string } | null)?.name,
+            days: c.days_of_week,
+            hours: c.publish_hours,
+          })),
+        },
       });
     }
 
@@ -186,6 +233,8 @@ export async function GET(request: NextRequest) {
       message: "Cron job completed",
       generated: totalGenerated,
       activeConfigs: activeConfigs.length,
+      forced: forceRun,
+      serverTime: localTime,
     });
   } catch (error) {
     console.error("Cron error:", error);
