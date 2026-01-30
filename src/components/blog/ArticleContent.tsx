@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
 import { ChevronDown, Clock, List } from "lucide-react";
 import type { PublicArticle } from "@/lib/actions/blog";
@@ -207,6 +208,7 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
         prose-img:border-[4px] prose-img:border-black prose-img:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]
       ">
         <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
           components={{
             // Custom heading with accent bar and ID
             h2: ({ children }) => {
@@ -278,6 +280,40 @@ export function ArticleContent({ article, primaryColor, secondaryColor }: Articl
                 </Link>
               );
             },
+            // Rendu des tableaux comparatifs
+            table: ({ children }) => (
+              <div className="my-10 overflow-x-auto">
+                <table className="w-full border-[4px] border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                  {children}
+                </table>
+              </div>
+            ),
+            thead: ({ children }) => (
+              <thead
+                className="border-b-[4px] border-black"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {children}
+              </thead>
+            ),
+            tbody: ({ children }) => (
+              <tbody className="bg-white">{children}</tbody>
+            ),
+            tr: ({ children }) => (
+              <tr className="border-b-[2px] border-black last:border-b-0 even:bg-gray-50">
+                {children}
+              </tr>
+            ),
+            th: ({ children }) => (
+              <th className="px-4 py-3 text-left text-sm font-black uppercase tracking-tight text-black border-r-[2px] border-black last:border-r-0">
+                {children}
+              </th>
+            ),
+            td: ({ children }) => (
+              <td className="px-4 py-3 text-sm text-gray-800 border-r-[2px] border-black last:border-r-0">
+                {children}
+              </td>
+            ),
           } as Components}
         >
           {article.content}

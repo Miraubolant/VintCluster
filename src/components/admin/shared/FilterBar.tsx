@@ -51,34 +51,34 @@ export function FilterBar({
   return (
     <div
       className={cn(
-        "bg-white rounded-lg border border-gray-200 p-4",
-        "flex flex-wrap items-center gap-3",
+        "bg-white rounded-xl border border-gray-200 p-5",
+        "flex flex-wrap items-center gap-4",
         className
       )}
     >
-      <div className="flex items-center gap-2 text-gray-500 mr-2">
-        <SlidersHorizontal className="h-4 w-4" />
-        <span className="text-sm font-medium hidden sm:inline">Filtres</span>
+      <div className="flex items-center gap-2.5 text-gray-500 mr-3">
+        <SlidersHorizontal className="h-5 w-5" />
+        <span className="text-base font-medium hidden sm:inline">Filtres</span>
       </div>
 
       {filters.map((filter) => (
-        <div key={filter.key} className={cn("flex-1 min-w-[150px] max-w-[250px]", filter.className)}>
+        <div key={filter.key} className={cn("flex-1 min-w-[160px] max-w-[280px]", filter.className)}>
           {filter.type === "search" ? (
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 type="text"
                 placeholder={filter.placeholder || `Rechercher...`}
                 value={values[filter.key] || ""}
                 onChange={(e) => onChange(filter.key, e.target.value || null)}
-                className="pl-9 h-9"
+                className="pl-11 h-11 text-base"
               />
               {values[filter.key] && (
                 <button
                   onClick={() => onChange(filter.key, null)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </button>
               )}
             </div>
@@ -87,7 +87,7 @@ export function FilterBar({
               value={values[filter.key] || "all"}
               onValueChange={(value) => onChange(filter.key, value === "all" ? null : value)}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger className="h-11 text-base">
                 <SelectValue placeholder={filter.placeholder || filter.label} />
               </SelectTrigger>
               <SelectContent>
@@ -107,11 +107,10 @@ export function FilterBar({
       {showResetButton && hasActiveFilters && onReset && (
         <Button
           variant="ghost"
-          size="sm"
           onClick={onReset}
-          className="text-gray-500 hover:text-gray-700 h-9"
+          className="text-gray-500 hover:text-gray-700 h-11 px-4 text-base"
         >
-          <X className="h-4 w-4 mr-1" />
+          <X className="h-5 w-5 mr-1.5" />
           Réinitialiser
         </Button>
       )}
@@ -133,20 +132,20 @@ export function SearchBar({
 }) {
   return (
     <div className={cn("relative", className)}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
       <Input
         type="text"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pl-9 h-9"
+        className="pl-11 h-11 text-base"
       />
       {value && (
         <button
           onClick={() => onChange("")}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </button>
       )}
     </div>

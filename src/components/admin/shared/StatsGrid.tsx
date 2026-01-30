@@ -87,10 +87,10 @@ const COLOR_CLASSES: Record<StatColor, { bg: string; icon: string; text: string 
 
 const GRID_COLS: Record<number, string> = {
   2: "grid-cols-1 sm:grid-cols-2",
-  3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-  4: "grid-cols-2 lg:grid-cols-4",
-  5: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
-  6: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6",
+  3: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3",
+  4: "grid-cols-2 xl:grid-cols-4",
+  5: "grid-cols-2 sm:grid-cols-3 xl:grid-cols-5",
+  6: "grid-cols-2 sm:grid-cols-3 xl:grid-cols-6",
 };
 
 export function StatsGrid({
@@ -101,17 +101,17 @@ export function StatsGrid({
 }: StatsGridProps) {
   if (loading) {
     return (
-      <div className={cn("grid gap-4", GRID_COLS[columns], className)}>
+      <div className={cn("grid gap-5", GRID_COLS[columns], className)}>
         {Array.from({ length: columns }).map((_, i) => (
           <div
             key={i}
-            className="bg-white rounded-lg border border-gray-200 p-4"
+            className="bg-white rounded-xl border border-gray-200 p-5"
           >
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-10 w-10 rounded-lg" />
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-12 w-12 rounded-xl" />
               <div className="space-y-2">
-                <Skeleton className="h-6 w-16" />
-                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-4 w-28" />
               </div>
             </div>
           </div>
@@ -121,7 +121,7 @@ export function StatsGrid({
   }
 
   return (
-    <div className={cn("grid gap-4", GRID_COLS[columns], className)}>
+    <div className={cn("grid gap-5", GRID_COLS[columns], className)}>
       {stats.map((stat, index) => {
         const colors = COLOR_CLASSES[stat.color];
         const Icon = stat.icon;
@@ -129,24 +129,24 @@ export function StatsGrid({
         return (
           <div
             key={index}
-            className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow"
+            className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow"
           >
-            <div className="flex items-center gap-3">
-              <div className={cn("p-2 rounded-lg", colors.bg)}>
-                <Icon className={cn("h-5 w-5", colors.icon)} />
+            <div className="flex items-center gap-4">
+              <div className={cn("p-3 rounded-xl", colors.bg)}>
+                <Icon className={cn("h-6 w-6", colors.icon)} />
               </div>
               <div>
-                <div className="flex items-baseline gap-1">
-                  <span className={cn("text-2xl font-bold", colors.text)}>
+                <div className="flex items-baseline gap-1.5">
+                  <span className={cn("text-3xl font-bold", colors.text)}>
                     {stat.value}
                   </span>
                   {stat.suffix && (
-                    <span className="text-sm text-gray-500">{stat.suffix}</span>
+                    <span className="text-base text-gray-500">{stat.suffix}</span>
                   )}
                 </div>
-                <p className="text-sm text-gray-500">{stat.label}</p>
+                <p className="text-base text-gray-500">{stat.label}</p>
                 {stat.description && (
-                  <p className="text-xs text-gray-400 mt-0.5">{stat.description}</p>
+                  <p className="text-sm text-gray-400 mt-0.5">{stat.description}</p>
                 )}
               </div>
             </div>

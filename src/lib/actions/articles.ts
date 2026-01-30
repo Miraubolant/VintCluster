@@ -814,11 +814,17 @@ export async function improveArticleWithAI(
 // Types pour l'amélioration SEO
 export type SEOModel = "gemini" | "claude";
 
+export interface SEOImproveOptions {
+  model: SEOModel;
+  includeTable?: boolean;
+}
+
 // Améliorer un article avec le prompt SEO expert (Gemini ou Claude)
 export async function improveArticleSEO(
   articleId: string,
-  model: SEOModel
+  options: SEOImproveOptions
 ): Promise<{ success: boolean; error?: string }> {
+  const { model, includeTable = false } = options;
   const supabase = await createClient();
 
   // Récupérer l'article existant avec son keyword
@@ -846,11 +852,11 @@ export async function improveArticleSEO(
     if (model === "gemini") {
       // Import dynamique pour éviter les erreurs si le module n'est pas installé
       const { improveArticleWithGemini } = await import("@/lib/gemini");
-      improved = await improveArticleWithGemini(articleInput);
+      improved = await improveArticleWithGemini(articleInput, { includeTable });
     } else {
       // Claude
       const { improveArticleWithClaude } = await import("@/lib/anthropic");
-      improved = await improveArticleWithClaude(articleInput);
+      improved = await improveArticleWithClaude(articleInput, { includeTable });
     }
 
     // Mettre à jour l'article (garder le même statut, marquer comme amélioré SEO)

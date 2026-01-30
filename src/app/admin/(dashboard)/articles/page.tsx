@@ -69,6 +69,7 @@ import {
   improveArticleWithAI,
   improveArticleSEO,
   type SEOModel,
+  type SEOImproveOptions,
 } from "@/lib/actions/articles";
 import { getSites } from "@/lib/actions/sites";
 
@@ -453,7 +454,7 @@ export default function ArticlesPage() {
     loadData();
   };
 
-  const handleBulkSEOImprove = async (model: SEOModel) => {
+  const handleBulkSEOImprove = async (options: SEOImproveOptions) => {
     if (table.selectedCount === 0) return;
 
     setSeoImproveDialogOpen(false);
@@ -482,12 +483,13 @@ export default function ArticlesPage() {
         break;
       }
 
+      const tableNote = options.includeTable ? " + Tableau" : "";
       setProgress((prev) => ({
         ...prev,
-        currentSite: `SEO Expert (${model}): ${article.title.substring(0, 30)}... (${i + 1}/${selectedArticles.length})`,
+        currentSite: `SEO Expert (${options.model}${tableNote}): ${article.title.substring(0, 30)}... (${i + 1}/${selectedArticles.length})`,
       }));
 
-      const result = await improveArticleSEO(article.id, model);
+      const result = await improveArticleSEO(article.id, options);
 
       if (cancelledRef.current) {
         if (result.success) {

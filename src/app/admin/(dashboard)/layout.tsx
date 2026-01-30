@@ -23,10 +23,12 @@ export default async function DashboardLayout({
         <AdminSidebar />
 
         {/* Main content */}
-        <div className="lg:pl-64">
+        <div className="lg:pl-72">
           <AdminHeader user={user} />
-          <main className="p-6">
-            {children}
+          <main className="p-4 sm:p-6 lg:p-8 xl:p-10">
+            <div className="max-w-[1800px] mx-auto">
+              {children}
+            </div>
           </main>
         </div>
       </div>

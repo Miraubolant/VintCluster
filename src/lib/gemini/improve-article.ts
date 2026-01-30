@@ -47,11 +47,25 @@ L'article DOIT suivre cette structure :
    - Transitions fluides entre sections
    - 1 mention produit subtile vers le milieu
    - 1 mention produit subtile vers la fin
+   - **TABLEAU COMPARATIF** (si demandé) : placer vers le milieu de l'article
 
 3. **Conclusion** (100-150 mots)
    - Récapitulatif des points clés
    - Call-to-action motivant (pas de vente directe)
    - Question ouverte pour l'engagement
+
+## TABLEAU COMPARATIF (SI DEMANDÉ)
+Quand un tableau est demandé, créer un tableau Markdown pertinent pour le sujet :
+- **Format** : Tableau Markdown standard (| Col1 | Col2 | Col3 |)
+- **Position** : Intégré naturellement au milieu de l'article, après un H2 approprié
+- **Types possibles** selon le contexte :
+  - Comparaison d'outils/solutions
+  - Comparaison Avant/Après utilisation d'un outil
+  - Avantages vs Inconvénients
+  - Tableau récapitulatif de conseils
+- **Contenu** : 4-6 lignes de données pertinentes + ligne d'en-tête
+- **Intégrer les produits Vint*** subtilement si pertinent pour la comparaison
+- Le tableau doit apporter une vraie valeur ajoutée au lecteur
 
 ## OPTIMISATIONS SEO OBLIGATOIRES
 - Mot-clé principal dans : titre H1, premier paragraphe, 1 H2, conclusion
@@ -90,6 +104,10 @@ interface ArticleInput {
   cluster?: string;
 }
 
+interface ImproveOptions {
+  includeTable?: boolean;
+}
+
 interface ImprovedArticle {
   title: string;
   summary: string;
@@ -98,11 +116,17 @@ interface ImprovedArticle {
 }
 
 export async function improveArticleWithGemini(
-  article: ArticleInput
+  article: ArticleInput,
+  options: ImproveOptions = {}
 ): Promise<ImprovedArticle> {
+  const { includeTable = false } = options;
   const client = getGeminiClient();
   // Utiliser gemini-2.0-flash (rapide et gratuit) ou gemini-1.5-pro-latest
   const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const tableInstruction = includeTable
+    ? `\n- **INCLURE UN TABLEAU COMPARATIF** : Crée un tableau Markdown pertinent pour le sujet, placé au milieu de l'article`
+    : "";
 
   const userPrompt = `## ARTICLE À RÉÉCRIRE COMPLÈTEMENT
 
@@ -126,7 +150,7 @@ L'article final doit être :
 - 10x plus engageant
 - Parfaitement optimisé pour le mot-clé
 - Naturel et impossible à détecter comme IA
-- Avec des CTA subtils vers nos produits
+- Avec des CTA subtils vers nos produits${tableInstruction}
 
 Retourne UNIQUEMENT le JSON valide, sans commentaires ni texte avant/après.`;
 

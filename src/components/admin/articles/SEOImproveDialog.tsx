@@ -11,14 +11,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Zap, Sparkles, Loader2, ExternalLink } from "lucide-react";
-import type { SEOModel } from "@/lib/actions/articles";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Zap, Sparkles, Loader2, Table2 } from "lucide-react";
+import type { SEOModel, SEOImproveOptions } from "@/lib/actions/articles";
 
 interface SEOImproveDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
-  onConfirm: (model: SEOModel) => void;
+  onConfirm: (options: SEOImproveOptions) => void;
   isLoading: boolean;
 }
 
@@ -30,6 +31,7 @@ export function SEOImproveDialog({
   isLoading,
 }: SEOImproveDialogProps) {
   const [selectedModel, setSelectedModel] = useState<SEOModel>("gemini");
+  const [includeTable, setIncludeTable] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,6 +114,34 @@ export function SEOImproveDialog({
             </RadioGroup>
           </div>
 
+          {/* Option tableau comparatif */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Options supplémentaires</Label>
+            <label
+              className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                includeTable
+                  ? "border-purple-500 bg-purple-50"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <Checkbox
+                checked={includeTable}
+                onCheckedChange={(checked) => setIncludeTable(checked === true)}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Table2 className="h-4 w-4 text-purple-600" />
+                  <span className="font-medium text-gray-900">Inclure un tableau comparatif</span>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">
+                  L&apos;IA génèrera un tableau Markdown pertinent au milieu de l&apos;article
+                  (ex: comparaison d&apos;outils, avant/après, avantages...)
+                </p>
+              </div>
+            </label>
+          </div>
+
           {/* Avertissement */}
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
             <strong>Note :</strong> L&apos;amélioration remplace le contenu existant.
@@ -129,7 +159,7 @@ export function SEOImproveDialog({
               Annuler
             </Button>
             <Button
-              onClick={() => onConfirm(selectedModel)}
+              onClick={() => onConfirm({ model: selectedModel, includeTable })}
               disabled={isLoading}
               className="bg-emerald-600 hover:bg-emerald-700 gap-2"
             >

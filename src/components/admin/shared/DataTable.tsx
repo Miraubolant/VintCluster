@@ -102,53 +102,54 @@ export function DataTable<T>({
   // Loading skeleton
   if (loading) {
     return (
-      <div className={cn("bg-white rounded-lg border border-gray-200 overflow-hidden", className)}>
+      <div className={cn("bg-white rounded-xl border border-gray-200 overflow-hidden", className)}>
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50">
               {selectable && (
-                <TableHead className="w-[50px]">
-                  <Skeleton className="h-4 w-4" />
+                <TableHead className="w-[56px] py-4">
+                  <Skeleton className="h-5 w-5" />
                 </TableHead>
               )}
               {columns.map((col) => (
                 <TableHead
                   key={col.key}
                   className={cn(
-                    "font-semibold text-gray-700",
+                    "font-semibold text-gray-700 text-sm py-4",
                     col.headerClassName,
                     col.hideOnMobile && "hidden md:table-cell",
                     col.hideOnTablet && "hidden lg:table-cell"
                   )}
                 >
-                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-5 w-24" />
                 </TableHead>
               ))}
-              {rowActions && <TableHead className="w-[50px]" />}
+              {rowActions && <TableHead className="w-[56px]" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i}>
                 {selectable && (
-                  <TableCell>
-                    <Skeleton className="h-4 w-4" />
+                  <TableCell className="py-4">
+                    <Skeleton className="h-5 w-5" />
                   </TableCell>
                 )}
                 {columns.map((col) => (
                   <TableCell
                     key={col.key}
                     className={cn(
+                      "py-4",
                       col.hideOnMobile && "hidden md:table-cell",
                       col.hideOnTablet && "hidden lg:table-cell"
                     )}
                   >
-                    <Skeleton className="h-4 w-full max-w-[200px]" />
+                    <Skeleton className="h-5 w-full max-w-[200px]" />
                   </TableCell>
                 ))}
                 {rowActions && (
-                  <TableCell>
-                    <Skeleton className="h-8 w-8" />
+                  <TableCell className="py-4">
+                    <Skeleton className="h-9 w-9" />
                   </TableCell>
                 )}
               </TableRow>
@@ -162,26 +163,27 @@ export function DataTable<T>({
   // Empty state
   if (items.length === 0) {
     return (
-      <div className={cn("bg-white rounded-lg border border-gray-200 p-8 text-center", className)}>
-        <p className="text-gray-500">{emptyMessage}</p>
+      <div className={cn("bg-white rounded-xl border border-gray-200 p-10 text-center", className)}>
+        <p className="text-base text-gray-500">{emptyMessage}</p>
         {emptyDescription && (
-          <p className="text-sm text-gray-400 mt-1">{emptyDescription}</p>
+          <p className="text-sm text-gray-400 mt-2">{emptyDescription}</p>
         )}
       </div>
     );
   }
 
   return (
-    <div className={cn("bg-white rounded-lg border border-gray-200 overflow-hidden", className)}>
+    <div className={cn("bg-white rounded-xl border border-gray-200 overflow-hidden", className)}>
       <Table>
         <TableHeader>
           <TableRow className="bg-gray-50">
             {selectable && (
-              <TableHead className="w-[50px]">
+              <TableHead className="w-[56px] py-4">
                 <Checkbox
                   checked={isIndeterminate ? "indeterminate" : isAllSelected}
                   onCheckedChange={handleToggleAll}
                   aria-label="Sélectionner tout"
+                  className="h-5 w-5"
                 />
               </TableHead>
             )}
@@ -189,7 +191,7 @@ export function DataTable<T>({
               <TableHead
                 key={col.key}
                 className={cn(
-                  "font-semibold text-gray-700",
+                  "font-semibold text-gray-700 text-sm py-4",
                   col.headerClassName,
                   col.hideOnMobile && "hidden md:table-cell",
                   col.hideOnTablet && "hidden lg:table-cell",
@@ -197,17 +199,17 @@ export function DataTable<T>({
                 )}
                 onClick={col.sortable && onSort ? () => onSort(col.key) : undefined}
               >
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   {col.header}
                   {col.sortable && sortBy === col.key && (
-                    <span className="text-xs">
+                    <span className="text-sm">
                       {sortOrder === "asc" ? "↑" : "↓"}
                     </span>
                   )}
                 </div>
               </TableHead>
             ))}
-            {rowActions && <TableHead className="w-[50px]" />}
+            {rowActions && <TableHead className="w-[56px]" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -225,11 +227,12 @@ export function DataTable<T>({
                 )}
               >
                 {selectable && (
-                  <TableCell>
+                  <TableCell className="py-4">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={() => handleToggleOne(id)}
                       aria-label={`Sélectionner l'élément`}
+                      className="h-5 w-5"
                     />
                   </TableCell>
                 )}
@@ -237,6 +240,7 @@ export function DataTable<T>({
                   <TableCell
                     key={col.key}
                     className={cn(
+                      "py-4",
                       col.className,
                       col.hideOnMobile && "hidden md:table-cell",
                       col.hideOnTablet && "hidden lg:table-cell"
@@ -245,7 +249,7 @@ export function DataTable<T>({
                     {col.cell(item)}
                   </TableCell>
                 ))}
-                {rowActions && <TableCell>{rowActions(item)}</TableCell>}
+                {rowActions && <TableCell className="py-4">{rowActions(item)}</TableCell>}
               </TableRow>
             );
           })}
