@@ -38,9 +38,33 @@ Les articles générés doivent promouvoir ces 3 produits SaaS avec des **CTA cl
 
 ## Styles Visuels
 
-### Blog Public : Néo-Brutalisme
+### Système de Templates (5 variantes)
 
-Le design du blog public suit le style **néo-brutalisme** :
+Chaque site peut avoir un template différent qui affecte à la fois le **style visuel** (header, cards, footer) et le **ton du contenu IA généré**. Ceci permet une diversification anti-détection Google.
+
+| Template | Style visuel | Ton contenu | Formality |
+|----------|--------------|-------------|-----------|
+| **Brutal** | Néo-brutaliste, bordures épaisses, ombres décalées | Direct, listes | Tutoiement |
+| **Minimal** | Ultra clean, beaucoup d'espace blanc | Élégant, paragraphes | Vouvoiement |
+| **Magazine** | Éditorial, grandes images | Journalistique | Vouvoiement |
+| **Tech** | Moderne, gradients subtils, fond blanc | Expert, technique | Tutoiement |
+| **Fresh** | Coloré, coins arrondis, dynamique | Casual, fun, emojis | Tutoiement |
+
+#### Fichiers du système de templates
+```
+src/components/blog/TemplateContext.tsx  # Context React + styles visuels
+src/lib/openai/template-styles.ts        # Prompts de contenu par template
+src/types/database.ts                     # Types SiteTemplate, TEMPLATES config
+migrations/003_add_template_to_sites.sql # Migration SQL
+```
+
+#### Actions admin
+- **Édition site** : Sélecteur de template dans le formulaire
+- **Bulk update** : Sélectionner plusieurs sites → choisir template → Appliquer
+
+### Blog Public : Néo-Brutalisme (Template par défaut)
+
+Le template "Brutal" suit le style **néo-brutalisme** :
 
 - **Bordures épaisses** : `border-4 border-black`
 - **Ombres décalées** : `shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]` ou `shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]`
@@ -151,6 +175,7 @@ CREATE TABLE sites (
   favicon_url TEXT,                     -- URL du favicon (optionnel)
   primary_color TEXT DEFAULT '#FFE500',
   secondary_color TEXT DEFAULT '#000000',
+  template TEXT DEFAULT 'brutal',       -- brutal | minimal | magazine | tech | fresh
   meta_title TEXT,                      -- Titre SEO (optionnel)
   meta_description TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -275,9 +300,10 @@ src/
 - `getSites()` - Liste tous les sites
 - `getSitesWithStats()` - Liste avec compteurs (keywords, articles)
 - `getSiteById(id)` - Récupère un site
-- `createSite(data)` - Crée un site
+- `createSite(data)` - Crée un site (inclut template)
 - `updateSite(id, data)` - Met à jour un site (+ revalidation cache auto)
 - `deleteSite(id)` - Supprime un site
+- `bulkUpdateSiteTemplate(siteIds, template)` - Met à jour le template de plusieurs sites en masse
 - `generateSiteSEO(siteName, siteId?)` - Génère meta_title/description avec IA
 - `generateFavicon(siteName, primaryColor, secondaryColor, siteId?)` - Génère favicon avec initiales
 
@@ -315,7 +341,7 @@ interface ImageOptions {
 - `bulkSubmitToIndexNow(ids)` - Soumet articles existants à IndexNow
 
 ### Scheduler (`lib/actions/scheduler.ts`)
-- `getSchedulerConfigs()` - Liste toutes les configurations scheduler
+- `getSchedulerConfigs()` - Liste toutes les configurations scheduler (inclut `articlesCount` par site)
 - `getSchedulerConfigBySiteId(siteId)` - Config d'un site
 - `upsertSchedulerConfig(siteId, config)` - Crée/met à jour une config
 - `toggleSchedulerEnabled(siteId, enabled)` - Active/désactive
@@ -637,8 +663,10 @@ src/app/admin/(dashboard)/analytics/page.tsx  # Page UI
 - **Debug** : Endpoints `/api/debug-*` pour diagnostiquer les problèmes (domain, article, page, render)
 - **Bulk Actions** : La page articles supporte la sélection multiple et les actions en masse
 - **Error Boundaries** : `error.tsx` dans les routes pour capturer et afficher les erreurs de rendu
-- **Scheduler UI** : L'interface affiche "Images IA: FLUX Schnell" pour informer que les images sont auto-générées
+- **Scheduler UI** : L'interface affiche "Images IA: FLUX Schnell" pour informer que les images sont auto-générées. Badge bleu affichant le nombre d'articles par configuration.
 - **Bulk Generation** : Le scheduler permet de sélectionner plusieurs configs et lancer une génération en masse avec répartition automatique des articles
+- **Templates** : 5 templates visuels (Brutal, Minimal, Magazine, Tech, Fresh) configurables par site avec mise à jour en masse
+- **Bulk Template Update** : Sélection multiple de sites + toolbar pour appliquer un template à tous
 - **Progress Bar** : Barre de progression en bas à droite affichant le statut en temps réel lors de la génération en masse
 - **Image Storage** : Les images générées par Replicate sont persistées dans Supabase Storage (bucket `images`) pour éviter l'expiration des URLs temporaires
 - **Admin Favicon** : Emoji ⚙️ en SVG data URL pour le favicon admin
@@ -710,6 +738,10 @@ CREATE INDEX IF NOT EXISTS idx_keywords_priority ON keywords(priority DESC);
 
 -- 5. Mettre à jour RLS si nécessaire (optionnel)
 -- Si vous utilisez RLS, adaptez les policies pour gérer site_id nullable
+
+-- 6. Ajouter la colonne template aux sites (migration 003)
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS template TEXT DEFAULT 'brutal';
+-- Templates disponibles: brutal | minimal | magazine | tech | fresh
 ```
 
 ## Format CSV Import Keywords

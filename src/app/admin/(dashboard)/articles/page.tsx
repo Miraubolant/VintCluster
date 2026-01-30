@@ -52,6 +52,7 @@ import {
   ArticleRowActions,
   ArticleBulkActions,
   ARTICLE_STATUS_OPTIONS,
+  ARTICLE_SEO_OPTIONS,
   type ArticleWithDetails,
 } from "@/components/admin/articles";
 
@@ -105,6 +106,13 @@ const getFilterConfigs = (sites: Site[]): FilterConfig[] => [
     placeholder: "Tous les statuts",
     options: ARTICLE_STATUS_OPTIONS,
   },
+  {
+    key: "seo",
+    type: "select",
+    label: "SEO",
+    placeholder: "Tous",
+    options: ARTICLE_SEO_OPTIONS,
+  },
 ];
 
 // Configuration des stats
@@ -138,15 +146,26 @@ export default function ArticlesPage() {
   const [loading, setLoading] = useState(true);
   const [bulkLoading, setBulkLoading] = useState(false);
 
+  // Filtrer articles par SEO (client-side)
+  const filteredArticles = articles.filter((article) => {
+    if (!selectedSeoFilter || selectedSeoFilter === "all") return true;
+    if (selectedSeoFilter === "improved") return article.seo_improved === true;
+    if (selectedSeoFilter === "not_improved") return !article.seo_improved;
+    if (selectedSeoFilter === "gemini") return article.seo_model === "gemini";
+    if (selectedSeoFilter === "claude") return article.seo_model === "claude";
+    return true;
+  });
+
   // Table state avec hook
   const table = useTableState({
-    items: articles,
+    items: filteredArticles,
     getItemId: (a) => a.id,
   });
 
   // Filtres locaux (synchro avec serveur)
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<ArticleStatus | null>(null);
+  const [selectedSeoFilter, setSelectedSeoFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Dialogs
@@ -213,6 +232,7 @@ export default function ArticlesPage() {
     if (key === "search") setSearchQuery(value || "");
     if (key === "siteId") setSelectedSiteId(value);
     if (key === "status") setSelectedStatus(value as ArticleStatus | null);
+    if (key === "seo") setSelectedSeoFilter(value);
   };
 
   // Handlers d'actions individuelles
@@ -550,12 +570,14 @@ export default function ArticlesPage() {
           search: searchQuery,
           siteId: selectedSiteId,
           status: selectedStatus,
+          seo: selectedSeoFilter,
         }}
         onChange={handleFilterChange}
         onReset={() => {
           setSearchQuery("");
           setSelectedSiteId(null);
           setSelectedStatus(null);
+          setSelectedSeoFilter(null);
           table.clearSelection();
         }}
       />
@@ -564,7 +586,7 @@ export default function ArticlesPage() {
       {table.selectedCount > 0 && (
         <SelectionToolbar
           selectedCount={table.selectedCount}
-          totalCount={articles.length}
+          totalCount={filteredArticles.length}
           onClearSelection={table.clearSelection}
           onSelectAll={table.selectAll}
           itemLabel="article"
@@ -584,7 +606,7 @@ export default function ArticlesPage() {
 
       {/* Table */}
       <DataTable
-        items={articles}
+        items={filteredArticles}
         columns={columns}
         getItemId={(a) => a.id}
         selectable

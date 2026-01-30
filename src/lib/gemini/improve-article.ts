@@ -143,10 +143,57 @@ Retourne UNIQUEMENT le JSON valide, sans commentaires ni texte avant/après.`;
     throw new Error("Failed to parse Gemini response as JSON");
   }
 
+  // Nettoyer le JSON des caractères de contrôle et problèmes courants
+  let cleanedJson = jsonMatch[0]
+    // Supprimer les caractères de contrôle (sauf \n, \r, \t)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+    // Échapper les retours à la ligne dans les strings (entre guillemets)
+    .replace(/(?<=:\s*"[^"]*)\n(?=[^"]*")/g, "\\n")
+    // Supprimer les virgules trailing avant } ou ]
+    .replace(/,(\s*[}\]])/g, "$1");
+
+  // Essayer de parser le JSON nettoyé
   try {
-    const parsed = JSON.parse(jsonMatch[0]) as ImprovedArticle;
+    const parsed = JSON.parse(cleanedJson) as ImprovedArticle;
     return parsed;
-  } catch (error) {
-    throw new Error(`Failed to parse Gemini JSON response: ${error}`);
+  } catch (firstError) {
+    // Deuxième tentative : nettoyer plus agressivement le contenu
+    try {
+      // Extraire les champs un par un avec regex
+      const titleMatch = cleanedJson.match(/"title"\s*:\s*"([^"]+)"/);
+      const summaryMatch = cleanedJson.match(/"summary"\s*:\s*"([^"]+)"/);
+      const contentMatch = cleanedJson.match(/"content"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"faq"|"\s*})/);
+      const faqMatch = cleanedJson.match(/"faq"\s*:\s*\[([\s\S]*?)\]\s*}/);
+
+      if (titleMatch && summaryMatch && contentMatch) {
+        // Nettoyer le contenu des caractères problématiques
+        const content = contentMatch[1]
+          .replace(/\\n/g, "\n")
+          .replace(/\\"/g, '"')
+          .replace(/\\/g, "");
+
+        // Parser la FAQ si présente
+        let faq: Array<{ question: string; answer: string }> = [];
+        if (faqMatch) {
+          try {
+            faq = JSON.parse(`[${faqMatch[1]}]`);
+          } catch {
+            // FAQ invalide, utiliser un tableau vide
+            faq = [];
+          }
+        }
+
+        return {
+          title: titleMatch[1],
+          summary: summaryMatch[1],
+          content: content,
+          faq: faq,
+        };
+      }
+
+      throw new Error(`Failed to extract article fields from Gemini response`);
+    } catch (secondError) {
+      throw new Error(`Failed to parse Gemini JSON response: ${firstError}`);
+    }
   }
 }

@@ -36,7 +36,7 @@ export function SEOBadge({ model, improved }: { model?: string | null; improved?
       title={`Amélioré par SEO Expert (${modelLabel})`}
     >
       <Zap className="h-2.5 w-2.5" />
-      SEO
+      {modelLabel}
     </span>
   );
 }
@@ -148,4 +148,13 @@ export const ARTICLE_STATUS_OPTIONS = [
   { value: "ready", label: "Prêts" },
   { value: "published", label: "Publiés" },
   { value: "unpublished", label: "Dépubliés" },
+];
+
+// Options de filtre SEO
+export const ARTICLE_SEO_OPTIONS = [
+  { value: "all", label: "Tous" },
+  { value: "improved", label: "SEO amélioré" },
+  { value: "not_improved", label: "Non amélioré" },
+  { value: "gemini", label: "Gemini" },
+  { value: "claude", label: "Claude" },
 ];
