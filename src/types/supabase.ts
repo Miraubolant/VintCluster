@@ -84,6 +84,9 @@ export type Database = {
           image_url: string | null
           keyword_id: string | null
           published_at: string | null
+          seo_improved: boolean | null
+          seo_improved_at: string | null
+          seo_model: string | null
           site_id: string
           slug: string
           status: string | null
@@ -100,6 +103,9 @@ export type Database = {
           image_url?: string | null
           keyword_id?: string | null
           published_at?: string | null
+          seo_improved?: boolean | null
+          seo_improved_at?: string | null
+          seo_model?: string | null
           site_id: string
           slug: string
           status?: string | null
@@ -116,6 +122,9 @@ export type Database = {
           image_url?: string | null
           keyword_id?: string | null
           published_at?: string | null
+          seo_improved?: boolean | null
+          seo_improved_at?: string | null
+          seo_model?: string | null
           site_id?: string
           slug?: string
           status?: string | null

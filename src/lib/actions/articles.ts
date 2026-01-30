@@ -853,7 +853,7 @@ export async function improveArticleSEO(
       improved = await improveArticleWithClaude(articleInput);
     }
 
-    // Mettre à jour l'article (garder le même statut)
+    // Mettre à jour l'article (garder le même statut, marquer comme amélioré SEO)
     const { error: updateError } = await supabase
       .from("articles")
       .update({
@@ -861,6 +861,9 @@ export async function improveArticleSEO(
         content: improved.content,
         summary: improved.summary,
         faq: improved.faq as unknown as Json,
+        seo_improved: true,
+        seo_improved_at: new Date().toISOString(),
+        seo_model: model,
         updated_at: new Date().toISOString(),
       })
       .eq("id", articleId);

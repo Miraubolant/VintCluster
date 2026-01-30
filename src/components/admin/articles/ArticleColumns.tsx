@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
+import { Zap } from "lucide-react";
 import type { Column } from "@/components/admin/shared";
 import type { Article, ArticleStatus } from "@/types/database";
 
@@ -16,6 +17,28 @@ export interface ArticleWithDetails extends Article {
     name: string;
     domain: string;
   };
+}
+
+// Composant Badge SEO Expert
+export function SEOBadge({ model, improved }: { model?: string | null; improved?: boolean | null }) {
+  if (!improved) return null;
+
+  const modelLabel = model === "gemini" ? "Gemini" : model === "claude" ? "Claude" : "SEO";
+  const colorClass = model === "gemini"
+    ? "bg-blue-100 text-blue-700 border-blue-200"
+    : model === "claude"
+    ? "bg-orange-100 text-orange-700 border-orange-200"
+    : "bg-emerald-100 text-emerald-700 border-emerald-200";
+
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded border ${colorClass}`}
+      title={`Amélioré par SEO Expert (${modelLabel})`}
+    >
+      <Zap className="h-2.5 w-2.5" />
+      SEO
+    </span>
+  );
 }
 
 // Labels et styles pour les statuts
@@ -62,9 +85,12 @@ export function getArticleColumns(): Column<ArticleWithDetails>[] {
         <div className="flex items-center gap-3">
           <ArticleThumbnail src={article.image_url} alt={article.title} />
           <div className="min-w-0">
-            <p className="font-medium text-gray-900 truncate max-w-xs">
-              {article.title}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-gray-900 truncate max-w-xs">
+                {article.title}
+              </p>
+              <SEOBadge improved={article.seo_improved} model={article.seo_model} />
+            </div>
             <p className="text-xs text-gray-500 truncate max-w-xs">
               /{article.slug}
             </p>
