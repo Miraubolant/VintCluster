@@ -101,7 +101,8 @@ export async function improveArticleWithGemini(
   article: ArticleInput
 ): Promise<ImprovedArticle> {
   const client = getGeminiClient();
-  const model = client.getGenerativeModel({ model: "gemini-1.5-pro" });
+  // Utiliser gemini-2.0-flash (rapide et gratuit) ou gemini-1.5-pro-latest
+  const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
 
   const userPrompt = `## ARTICLE À RÉÉCRIRE COMPLÈTEMENT
 
