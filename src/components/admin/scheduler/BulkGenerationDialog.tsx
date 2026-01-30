@@ -22,7 +22,9 @@ import {
 } from "@/components/ui/select";
 import { getKeywordsForBulkGeneration } from "@/lib/actions/scheduler";
 import { IMPROVEMENT_MODELS, IMPROVEMENT_MODES, type ImprovementModel, type ImprovementMode } from "@/lib/openai";
-import { Search, Tag, Sparkles, Rocket, Loader2, ImageIcon, Globe, Hash, Send, Settings2 } from "lucide-react";
+import type { SEOModel } from "@/lib/actions/articles";
+import { Search, Tag, Sparkles, Rocket, Loader2, ImageIcon, Globe, Hash, Send, Settings2, Zap, Table2 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface AvailableKeyword {
   id: string;
@@ -47,6 +49,10 @@ export interface BulkGenerationConfig {
   autoPublish: boolean;
   totalArticles: number;
   imagesPerArticle: number;
+  // SEO Expert options
+  enableSeoExpert: boolean;
+  seoExpertModel: SEOModel;
+  seoExpertIncludeTable: boolean;
 }
 
 interface BulkGenerationDialogProps {
@@ -82,6 +88,11 @@ export function BulkGenerationDialog({
   const [totalArticles, setTotalArticles] = useState(initialArticleCount);
   const [imagesPerArticle, setImagesPerArticle] = useState(0);
 
+  // SEO Expert options
+  const [enableSeoExpert, setEnableSeoExpert] = useState(false);
+  const [seoExpertModel, setSeoExpertModel] = useState<SEOModel>("gemini");
+  const [seoExpertIncludeTable, setSeoExpertIncludeTable] = useState(false);
+
   // Load keywords when dialog opens
   useEffect(() => {
     async function loadKeywords() {
@@ -111,6 +122,9 @@ export function BulkGenerationDialog({
       setAutoPublish(false);
       setTotalArticles(initialArticleCount);
       setImagesPerArticle(0);
+      setEnableSeoExpert(false);
+      setSeoExpertModel("gemini");
+      setSeoExpertIncludeTable(false);
     }
   }, [open, initialArticleCount]);
 
@@ -144,6 +158,9 @@ export function BulkGenerationDialog({
       autoPublish,
       totalArticles,
       imagesPerArticle,
+      enableSeoExpert,
+      seoExpertModel,
+      seoExpertIncludeTable,
     });
   }
 
@@ -338,7 +355,96 @@ export function BulkGenerationDialog({
             </div>
           </section>
 
-          {/* Section 5: Mots-cles */}
+          {/* Section 5: SEO Expert */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              <Zap className="h-4 w-4 text-emerald-500" />
+              SEO Expert
+            </div>
+
+            <div className={`p-4 rounded-lg border transition-colors ${
+              enableSeoExpert ? "bg-emerald-50/50 border-emerald-200" : "bg-gray-50 border-gray-100"
+            }`}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <Label className="text-sm font-medium">Activer SEO Expert</Label>
+                  <p className="text-xs text-gray-500">
+                    Reecriture complete avec prompt SEO ultra-optimise (~$0.002/article avec Gemini)
+                  </p>
+                </div>
+                <Switch checked={enableSeoExpert} onCheckedChange={setEnableSeoExpert} />
+              </div>
+
+              {enableSeoExpert && (
+                <div className="space-y-4 pt-3 border-t border-emerald-200">
+                  {/* Choix du modèle */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-gray-600">Modele IA</Label>
+                    <RadioGroup
+                      value={seoExpertModel}
+                      onValueChange={(v) => setSeoExpertModel(v as SEOModel)}
+                      className="grid grid-cols-2 gap-2"
+                    >
+                      <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        seoExpertModel === "gemini"
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}>
+                        <RadioGroupItem value="gemini" />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-sm">Gemini 2.0 Flash</span>
+                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded">
+                              GRATUIT
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-gray-500">~$0.002/article</p>
+                        </div>
+                      </label>
+
+                      <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                        seoExpertModel === "claude"
+                          ? "border-orange-500 bg-orange-50"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}>
+                        <RadioGroupItem value="claude" />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-sm">Claude Sonnet</span>
+                            <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded">
+                              PREMIUM
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-gray-500">~$0.01/article</p>
+                        </div>
+                      </label>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Option tableau comparatif */}
+                  <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    seoExpertIncludeTable
+                      ? "border-purple-500 bg-purple-50"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}>
+                    <Checkbox
+                      checked={seoExpertIncludeTable}
+                      onCheckedChange={(checked) => setSeoExpertIncludeTable(checked === true)}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Table2 className="h-4 w-4 text-purple-600" />
+                      <div>
+                        <span className="font-medium text-sm">Inclure un tableau comparatif</span>
+                        <p className="text-[10px] text-gray-500">Tableau Markdown au milieu de l&apos;article</p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Section 6: Mots-cles */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">

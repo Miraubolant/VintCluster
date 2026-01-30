@@ -435,6 +435,10 @@ export interface BulkGenerationTask {
   improvementModel: string;
   improvementMode: string;
   imagesPerArticle: number; // 0 = main image only, 1-5 = additional images in content
+  // SEO Expert options
+  enableSeoExpert: boolean;
+  seoExpertModel: "gemini" | "claude";
+  seoExpertIncludeTable: boolean;
 }
 
 // Préparer les données pour la génération en masse
@@ -489,6 +493,10 @@ export async function prepareBulkGeneration(
       improvementModel: ((config as unknown as { improvement_model?: string }).improvement_model) || "gpt-4o",
       improvementMode: ((config as unknown as { improvement_mode?: string }).improvement_mode) || "full-pbn",
       imagesPerArticle: 0, // Default to main image only for backward compatibility
+      // SEO Expert defaults (off for backward compatibility)
+      enableSeoExpert: false,
+      seoExpertModel: "gemini",
+      seoExpertIncludeTable: false,
     });
   }
 
@@ -503,6 +511,10 @@ export interface BulkGenerationOptions {
   improvementMode?: string;
   autoPublish?: boolean;
   imagesPerArticle?: number; // 0 = main image only, 1-5 = additional images in content
+  // SEO Expert options
+  enableSeoExpert?: boolean;
+  seoExpertModel?: "gemini" | "claude";
+  seoExpertIncludeTable?: boolean;
 }
 
 // Préparer les données pour la génération en masse avec options personnalisées
@@ -580,6 +592,9 @@ export async function prepareBulkGenerationWithOptions(
       improvementModel: options.improvementModel || "gpt-4o",
       improvementMode: options.improvementMode || "full-pbn",
       imagesPerArticle: options.imagesPerArticle ?? 0,
+      enableSeoExpert: options.enableSeoExpert ?? false,
+      seoExpertModel: options.seoExpertModel ?? "gemini",
+      seoExpertIncludeTable: options.seoExpertIncludeTable ?? false,
     });
   }
 
@@ -592,6 +607,10 @@ export interface BulkImprovementOptions {
   improvementModel: string;
   improvementMode: string;
   imagesPerArticle?: number;
+  // SEO Expert options
+  enableSeoExpert?: boolean;
+  seoExpertModel?: "gemini" | "claude";
+  seoExpertIncludeTable?: boolean;
 }
 
 // Helper: Extract H2 titles from markdown content
@@ -694,6 +713,58 @@ export async function generateSingleBulkArticle(
       }
     }
 
+    // Appliquer SEO Expert si activé (après l'amélioration standard)
+    let seoExpertApplied = false;
+    if (improvementOptions?.enableSeoExpert) {
+      try {
+        // Import dynamique pour éviter les erreurs si les modules ne sont pas configurés
+        if (improvementOptions.seoExpertModel === "gemini") {
+          const { improveArticleWithGemini } = await import("@/lib/gemini");
+          const seoImproved = await improveArticleWithGemini(
+            {
+              title: generated.title,
+              summary: generated.summary,
+              content: generated.content,
+              keyword: keyword.keyword,
+              cluster: keyword.cluster || undefined,
+            },
+            { includeTable: improvementOptions.seoExpertIncludeTable ?? false }
+          );
+          generated = {
+            ...generated,
+            title: seoImproved.title,
+            content: seoImproved.content,
+            summary: seoImproved.summary,
+            faq: seoImproved.faq,
+          };
+          seoExpertApplied = true;
+        } else {
+          const { improveArticleWithClaude } = await import("@/lib/anthropic");
+          const seoImproved = await improveArticleWithClaude(
+            {
+              title: generated.title,
+              summary: generated.summary,
+              content: generated.content,
+              keyword: keyword.keyword,
+              cluster: keyword.cluster || undefined,
+            },
+            { includeTable: improvementOptions.seoExpertIncludeTable ?? false }
+          );
+          generated = {
+            ...generated,
+            title: seoImproved.title,
+            content: seoImproved.content,
+            summary: seoImproved.summary,
+            faq: seoImproved.faq,
+          };
+          seoExpertApplied = true;
+        }
+      } catch (seoError) {
+        // Continue si SEO Expert échoue
+        console.error("SEO Expert échoué:", seoError);
+      }
+    }
+
     // Générer l'image principale
     let imageUrl: string | null = null;
     let imageAlt: string | null = null;
@@ -755,6 +826,10 @@ export async function generateSingleBulkArticle(
         image_alt: imageAlt,
         status: autoPublish ? "published" : "draft",
         published_at: autoPublish ? new Date().toISOString() : null,
+        // SEO Expert fields
+        seo_improved: seoExpertApplied,
+        seo_improved_at: seoExpertApplied ? new Date().toISOString() : null,
+        seo_model: seoExpertApplied ? improvementOptions?.seoExpertModel : null,
       });
 
     if (articleError) {

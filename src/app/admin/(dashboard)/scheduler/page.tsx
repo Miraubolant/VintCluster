@@ -174,6 +174,9 @@ export default function SchedulerPage() {
         improvementMode: config.improvementMode,
         autoPublish: config.autoPublish,
         imagesPerArticle: config.imagesPerArticle,
+        enableSeoExpert: config.enableSeoExpert,
+        seoExpertModel: config.seoExpertModel,
+        seoExpertIncludeTable: config.seoExpertIncludeTable,
       }
     );
 
@@ -202,9 +205,10 @@ export default function SchedulerPage() {
           break outerLoop;
         }
 
+        const seoNote = task.enableSeoExpert ? ` [SEO ${task.seoExpertModel}]` : "";
         setProgress((prev) => ({
           ...prev,
-          currentSite: `${task.siteName} (${i + 1}/${task.count})`,
+          currentSite: `${task.siteName}${seoNote} (${i + 1}/${task.count})`,
         }));
 
         const result = await generateSingleBulkArticle(
@@ -216,6 +220,9 @@ export default function SchedulerPage() {
             improvementModel: task.improvementModel,
             improvementMode: task.improvementMode,
             imagesPerArticle: task.imagesPerArticle,
+            enableSeoExpert: task.enableSeoExpert,
+            seoExpertModel: task.seoExpertModel,
+            seoExpertIncludeTable: task.seoExpertIncludeTable,
           }
         );
 
