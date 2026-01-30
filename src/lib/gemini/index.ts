@@ -1,2 +1,2 @@
 export { getGeminiClient, isGeminiConfigured } from "./client";
-export { improveArticleWithGemini } from "./improve-article";
+export { improveArticleWithGemini, generateArticleWithSEO } from "./improve-article";

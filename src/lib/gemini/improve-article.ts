@@ -115,6 +115,94 @@ interface ImprovedArticle {
   faq: Array<{ question: string; answer: string }>;
 }
 
+// Génération directe d'article avec SEO Expert (sans passer par OpenAI d'abord)
+export async function generateArticleWithSEO(
+  keyword: string,
+  options: { cluster?: string; includeTable?: boolean } = {}
+): Promise<ImprovedArticle> {
+  const { cluster, includeTable = false } = options;
+  const client = getGeminiClient();
+  const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const tableInstruction = includeTable
+    ? `\n- **INCLURE UN TABLEAU COMPARATIF** : Crée un tableau Markdown pertinent pour le sujet, placé au milieu de l'article`
+    : "";
+
+  const userPrompt = `## GÉNÈRE UN ARTICLE SEO COMPLET
+
+**Mot-clé principal:** ${keyword}
+
+**Cluster thématique:** ${cluster || "vente Vinted"}
+
+---
+
+Génère un article de blog complet et optimisé SEO pour ce mot-clé.
+
+L'article doit être :
+- Entre 1500 et 2500 mots
+- Parfaitement optimisé pour le mot-clé principal
+- Naturel et impossible à détecter comme généré par IA
+- Avec des CTA subtils vers nos produits Vint*
+- Avec une FAQ de 5 questions pertinentes${tableInstruction}
+
+Retourne UNIQUEMENT le JSON valide, sans commentaires ni texte avant/après.`;
+
+  const result = await model.generateContent([
+    { text: SEO_EXPERT_PROMPT },
+    { text: userPrompt },
+  ]);
+
+  const response = result.response.text();
+
+  // Extraire le JSON de la réponse
+  const jsonMatch = response.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("Failed to parse Gemini response as JSON");
+  }
+
+  // Nettoyer le JSON
+  const cleanedJson = jsonMatch[0]
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+    .replace(/(?<=:\s*"[^"]*)\n(?=[^"]*")/g, "\\n")
+    .replace(/,(\s*[}\]])/g, "$1");
+
+  try {
+    const parsed = JSON.parse(cleanedJson) as ImprovedArticle;
+    return parsed;
+  } catch (error) {
+    // Fallback: extraire les champs manuellement
+    const titleMatch = cleanedJson.match(/"title"\s*:\s*"([^"]+)"/);
+    const summaryMatch = cleanedJson.match(/"summary"\s*:\s*"([^"]+)"/);
+    const contentMatch = cleanedJson.match(/"content"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"faq"|"\s*})/);
+    const faqMatch = cleanedJson.match(/"faq"\s*:\s*\[([\s\S]*?)\]\s*}/);
+
+    if (titleMatch && summaryMatch && contentMatch) {
+      const content = contentMatch[1]
+        .replace(/\\n/g, "\n")
+        .replace(/\\"/g, '"')
+        .replace(/\\/g, "");
+
+      let faq: Array<{ question: string; answer: string }> = [];
+      if (faqMatch) {
+        try {
+          faq = JSON.parse(`[${faqMatch[1]}]`);
+        } catch {
+          faq = [];
+        }
+      }
+
+      return {
+        title: titleMatch[1],
+        summary: summaryMatch[1],
+        content: content,
+        faq: faq,
+      };
+    }
+
+    throw new Error(`Failed to parse Gemini JSON response: ${error}`);
+  }
+}
+
 export async function improveArticleWithGemini(
   article: ArticleInput,
   options: ImproveOptions = {}

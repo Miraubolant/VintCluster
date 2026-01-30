@@ -120,6 +120,71 @@ interface ImprovedArticle {
   faq: Array<{ question: string; answer: string }>;
 }
 
+// Génération directe d'article avec SEO Expert (sans passer par OpenAI d'abord)
+export async function generateArticleWithSEOClaude(
+  keyword: string,
+  options: { cluster?: string; includeTable?: boolean } = {}
+): Promise<ImprovedArticle> {
+  const client = getAnthropicClient();
+  const { cluster, includeTable = false } = options;
+
+  const tableInstruction = includeTable
+    ? `\n- **INCLURE UN TABLEAU COMPARATIF** pertinent au milieu de l'article`
+    : "";
+
+  const userPrompt = `## GÉNÈRE UN ARTICLE SEO COMPLET
+
+**Mot-clé principal:** ${keyword}
+
+**Cluster thématique:** ${cluster || "vente Vinted"}
+
+---
+
+Génère un article de blog complet et optimisé SEO pour ce mot-clé.
+
+L'article doit être :
+- Entre 1500 et 2500 mots
+- Parfaitement optimisé pour le mot-clé principal
+- Naturel et impossible à détecter comme généré par IA
+- Avec des CTA subtils vers nos produits Vint*
+- Avec une FAQ de 5 questions pertinentes${tableInstruction}
+
+IMPORTANT : Retourne UNIQUEMENT le JSON valide, sans aucun commentaire, explication ou texte avant/après le JSON.`;
+
+  const message = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 8192,
+    messages: [
+      {
+        role: "user",
+        content: userPrompt,
+      },
+    ],
+    system: SEO_EXPERT_SYSTEM_PROMPT,
+  });
+
+  // Extraire le texte de la réponse
+  const textContent = message.content.find((block) => block.type === "text");
+  if (!textContent || textContent.type !== "text") {
+    throw new Error("No text content in Claude response");
+  }
+
+  const response = textContent.text;
+
+  // Extraire le JSON de la réponse
+  const jsonMatch = response.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("Failed to parse Claude response as JSON");
+  }
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0]) as ImprovedArticle;
+    return parsed;
+  } catch (error) {
+    throw new Error(`Failed to parse Claude JSON response: ${error}`);
+  }
+}
+
 export async function improveArticleWithClaude(
   article: ArticleInput,
   options: ImproveOptions = {}

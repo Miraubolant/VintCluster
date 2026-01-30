@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { generateArticle } from "@/lib/openai";
 import { generateImage, generateImagePrompt } from "@/lib/replicate";
+import { generateArticleWithSEO } from "@/lib/gemini";
+import { generateArticleWithSEOClaude } from "@/lib/anthropic";
+import { generateSlug } from "@/lib/utils/slug";
 import type { Database, Json } from "@/types/supabase";
 
 // Fuseau horaire pour le cron (France)
@@ -166,9 +169,34 @@ export async function GET(request: NextRequest) {
         .eq("id", keyword.id);
 
       try {
-        // Générer l'article avec OpenAI (passer le cluster pour les CTA)
+        // Récupérer les options SEO Expert depuis la config
+        const enableSeoExpert = (config as unknown as { enable_seo_expert?: boolean }).enable_seo_expert || false;
+        const seoExpertModel = ((config as unknown as { seo_expert_model?: string }).seo_expert_model as "gemini" | "claude") || "gemini";
+        const seoExpertIncludeTable = (config as unknown as { seo_expert_include_table?: boolean }).seo_expert_include_table || false;
+
+        // Générer l'article
         const cluster = keyword.cluster || keyword.site_key || undefined;
-        const generated = await generateArticle(keyword.keyword, cluster);
+        let generated;
+
+        if (enableSeoExpert) {
+          // Génération directe avec SEO Expert (Gemini ou Claude)
+          if (seoExpertModel === "claude") {
+            generated = await generateArticleWithSEOClaude(keyword.keyword, {
+              cluster,
+              includeTable: seoExpertIncludeTable,
+            });
+          } else {
+            generated = await generateArticleWithSEO(keyword.keyword, {
+              cluster,
+              includeTable: seoExpertIncludeTable,
+            });
+          }
+          // Ajouter le slug qui n'est pas généré par SEO Expert
+          (generated as { slug?: string }).slug = generateSlug(generated.title);
+        } else {
+          // Génération standard avec OpenAI
+          generated = await generateArticle(keyword.keyword, cluster);
+        }
 
         // Générer une image avec Replicate (FLUX Schnell pour la rapidité)
         let imageUrl: string | null = null;
@@ -222,11 +250,11 @@ export async function GET(request: NextRequest) {
           .update({ status: config.auto_publish ? "published" : "generated" })
           .eq("id", keyword.id);
 
-        // Logger l'activité avec infos image
+        // Logger l'activité avec infos image et SEO Expert
         await supabase.from("activity_logs").insert({
           site_id: config.site_id,
           type: "article_generated",
-          message: `Article auto-généré: ${generated.title}`,
+          message: `Article auto-généré${enableSeoExpert ? ` (SEO Expert ${seoExpertModel})` : ""}: ${generated.title}`,
           metadata: {
             article_id: article.id,
             keyword: keyword.keyword,
@@ -234,6 +262,9 @@ export async function GET(request: NextRequest) {
             auto_published: config.auto_publish,
             image_generated: imageGenerated,
             image_model: imageGenerated ? "flux-schnell" : null,
+            seo_expert: enableSeoExpert,
+            seo_model: enableSeoExpert ? seoExpertModel : null,
+            seo_include_table: enableSeoExpert ? seoExpertIncludeTable : null,
           } as unknown as Json,
         });
 

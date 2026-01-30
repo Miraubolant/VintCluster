@@ -1,2 +1,2 @@
 export { getAnthropicClient, isAnthropicConfigured } from "./client";
-export { improveArticleWithClaude } from "./improve-article";
+export { improveArticleWithClaude, generateArticleWithSEOClaude } from "./improve-article";
