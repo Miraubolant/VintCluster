@@ -146,7 +146,13 @@ export default function ArticlesPage() {
   const [loading, setLoading] = useState(true);
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  // Filtrer articles par SEO (client-side)
+  // Filtres locaux (synchro avec serveur)
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<ArticleStatus | null>(null);
+  const [selectedSeoFilter, setSelectedSeoFilter] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filtrer articles par SEO (client-side) - doit être après la déclaration de selectedSeoFilter
   const filteredArticles = articles.filter((article) => {
     if (!selectedSeoFilter || selectedSeoFilter === "all") return true;
     if (selectedSeoFilter === "improved") return article.seo_improved === true;
@@ -161,12 +167,6 @@ export default function ArticlesPage() {
     items: filteredArticles,
     getItemId: (a) => a.id,
   });
-
-  // Filtres locaux (synchro avec serveur)
-  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<ArticleStatus | null>(null);
-  const [selectedSeoFilter, setSelectedSeoFilter] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
 
   // Dialogs
   const [previewArticle, setPreviewArticle] = useState<ArticleWithDetails | null>(null);
