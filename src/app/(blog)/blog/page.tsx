@@ -48,6 +48,9 @@ export async function generateMetadata(): Promise<Metadata> {
       : undefined,
     alternates: {
       canonical: "/blog",
+      types: {
+        "application/rss+xml": "/feed.xml",
+      },
     },
     openGraph: {
       title,

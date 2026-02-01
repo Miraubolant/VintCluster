@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Loader2, ImageIcon } from "lucide-react";
+import { Sparkles, Loader2, ImageIcon, Webhook } from "lucide-react";
 import { toast } from "sonner";
 import type { Site, SiteTemplate } from "@/types/database";
 import { TEMPLATES } from "@/types/database";
@@ -37,6 +38,8 @@ export function SiteForm({ site, onSubmit, onCancel, loading }: SiteFormProps) {
     meta_title: site?.meta_title || "",
     meta_description: site?.meta_description || "",
     template: (site?.template as SiteTemplate) || "brutal",
+    webhook_url: site?.webhook_url || "",
+    webhook_enabled: site?.webhook_enabled || false,
   });
 
   const [generatingSEO, setGeneratingSEO] = useState(false);
@@ -305,6 +308,41 @@ export function SiteForm({ site, onSubmit, onCancel, loading }: SiteFormProps) {
           />
           <p className="text-xs text-gray-500">
             {(formData.meta_description || "").length}/160 caractères recommandés
+          </p>
+        </div>
+      </div>
+
+      {/* Webhook Section */}
+      <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Webhook className="w-4 h-4 text-gray-600" />
+            <h3 className="font-semibold text-sm text-gray-700">Rapports hebdomadaires</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="webhook_enabled" className="text-sm text-gray-600">
+              Activer
+            </Label>
+            <Switch
+              id="webhook_enabled"
+              checked={formData.webhook_enabled || false}
+              onCheckedChange={(checked) => setFormData({ ...formData, webhook_enabled: checked })}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="webhook_url">URL du webhook</Label>
+          <Input
+            id="webhook_url"
+            type="url"
+            value={formData.webhook_url}
+            onChange={(e) => setFormData({ ...formData, webhook_url: e.target.value })}
+            placeholder="https://hooks.slack.com/services/xxx ou https://discord.com/api/webhooks/xxx"
+            disabled={!formData.webhook_enabled}
+          />
+          <p className="text-xs text-gray-500">
+            Recevez un rapport JSON avec les métriques SEO chaque semaine (clics, impressions, CTR, position)
           </p>
         </div>
       </div>

@@ -40,6 +40,9 @@ export async function generateMetadata(): Promise<Metadata> {
       : undefined,
     alternates: {
       canonical: "/",
+      types: {
+        "application/rss+xml": "/feed.xml",
+      },
     },
     openGraph: {
       title: site.meta_title || site.name,

@@ -93,6 +93,13 @@ export type Database = {
           summary: string | null
           title: string
           updated_at: string | null
+          // SEO optimization columns
+          seo_score: number | null
+          word_count: number | null
+          heading_count: number | null
+          internal_links: number | null
+          external_links: number | null
+          reading_time: number | null
         }
         Insert: {
           content: string
@@ -112,6 +119,13 @@ export type Database = {
           summary?: string | null
           title: string
           updated_at?: string | null
+          // SEO optimization columns
+          seo_score?: number | null
+          word_count?: number | null
+          heading_count?: number | null
+          internal_links?: number | null
+          external_links?: number | null
+          reading_time?: number | null
         }
         Update: {
           content?: string
@@ -131,6 +145,13 @@ export type Database = {
           summary?: string | null
           title?: string
           updated_at?: string | null
+          // SEO optimization columns
+          seo_score?: number | null
+          word_count?: number | null
+          heading_count?: number | null
+          internal_links?: number | null
+          external_links?: number | null
+          reading_time?: number | null
         }
         Relationships: [
           {
@@ -252,6 +273,102 @@ export type Database = {
           },
         ]
       }
+      related_articles: {
+        Row: {
+          id: string
+          article_id: string
+          related_article_id: string
+          score: number | null
+          reason: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          article_id: string
+          related_article_id: string
+          score?: number | null
+          reason?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          article_id?: string
+          related_article_id?: string
+          score?: number | null
+          reason?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "related_articles_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "related_articles_related_article_id_fkey"
+            columns: ["related_article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seo_tracking: {
+        Row: {
+          id: string
+          site_id: string
+          article_id: string | null
+          date: string
+          clicks: number | null
+          impressions: number | null
+          ctr: number | null
+          position: number | null
+          top_query: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          site_id: string
+          article_id?: string | null
+          date: string
+          clicks?: number | null
+          impressions?: number | null
+          ctr?: number | null
+          position?: number | null
+          top_query?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          site_id?: string
+          article_id?: string | null
+          date?: string
+          clicks?: number | null
+          impressions?: number | null
+          ctr?: number | null
+          position?: number | null
+          top_query?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seo_tracking_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seo_tracking_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sites: {
         Row: {
           created_at: string | null
@@ -266,6 +383,8 @@ export type Database = {
           secondary_color: string | null
           template: string | null
           updated_at: string | null
+          webhook_url: string | null
+          webhook_enabled: boolean | null
         }
         Insert: {
           created_at?: string | null
@@ -280,6 +399,8 @@ export type Database = {
           secondary_color?: string | null
           template?: string | null
           updated_at?: string | null
+          webhook_url?: string | null
+          webhook_enabled?: boolean | null
         }
         Update: {
           created_at?: string | null
@@ -294,6 +415,8 @@ export type Database = {
           secondary_color?: string | null
           template?: string | null
           updated_at?: string | null
+          webhook_url?: string | null
+          webhook_enabled?: boolean | null
         }
         Relationships: []
       }

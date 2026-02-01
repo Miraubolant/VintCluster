@@ -6,6 +6,7 @@ import { generateArticle, improveArticle, type ImprovementModel, type Improvemen
 import { generateImage, generateImagePrompt, type ImageModel } from "@/lib/replicate";
 import { generateSlug } from "@/lib/utils/slug";
 import { submitArticleToIndexNow, submitArticlesToIndexNow } from "@/lib/indexnow";
+import { analyzeArticleSEO } from "@/lib/seo";
 import type { Article, ArticleStatus, Json } from "@/types/database";
 
 // Options pour la génération d'image
@@ -145,7 +146,17 @@ export async function generateArticleFromKeyword(
     }
     // Si source === "none" ou non défini, pas d'image
 
-    // Créer l'article
+    // Analyser le SEO de l'article
+    const seoAnalysis = analyzeArticleSEO(
+      generated.content,
+      generated.title,
+      generated.summary,
+      keyword.keyword,
+      imageUrl,
+      generated.faq
+    );
+
+    // Créer l'article avec les métriques SEO
     const { data: article, error: articleError } = await supabase
       .from("articles")
       .insert({
@@ -159,6 +170,13 @@ export async function generateArticleFromKeyword(
         image_url: imageUrl,
         image_alt: imageAlt,
         status: "draft",
+        // Métriques SEO
+        seo_score: seoAnalysis.score,
+        word_count: seoAnalysis.wordCount,
+        heading_count: seoAnalysis.headingCount,
+        internal_links: seoAnalysis.internalLinks,
+        external_links: seoAnalysis.externalLinks,
+        reading_time: seoAnalysis.readingTime,
       })
       .select()
       .single();
@@ -402,19 +420,48 @@ export async function updateArticle(
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
 
-  // Vérifier si l'article est publié
+  // Récupérer l'article existant pour avoir toutes les données
   const { data: existing } = await supabase
     .from("articles")
-    .select("status, slug")
+    .select("status, slug, title, content, summary, faq, image_url, keyword:keywords(keyword)")
     .eq("id", id)
     .single();
 
+  // Préparer les données de mise à jour
+  const updateData: Record<string, unknown> = {
+    ...data,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Recalculer le score SEO si le contenu a changé
+  if (data.content || data.title || data.summary || data.faq || data.image_url !== undefined) {
+    const finalContent = data.content || existing?.content || "";
+    const finalTitle = data.title || existing?.title || "";
+    const finalSummary = data.summary || existing?.summary || "";
+    const finalFaq = data.faq || (existing?.faq as { question: string; answer: string }[] | null);
+    const finalImageUrl = data.image_url !== undefined ? data.image_url : existing?.image_url;
+    const keyword = (existing?.keyword as { keyword: string } | null)?.keyword;
+
+    const seoAnalysis = analyzeArticleSEO(
+      finalContent,
+      finalTitle,
+      finalSummary,
+      keyword,
+      finalImageUrl,
+      finalFaq
+    );
+
+    updateData.seo_score = seoAnalysis.score;
+    updateData.word_count = seoAnalysis.wordCount;
+    updateData.heading_count = seoAnalysis.headingCount;
+    updateData.internal_links = seoAnalysis.internalLinks;
+    updateData.external_links = seoAnalysis.externalLinks;
+    updateData.reading_time = seoAnalysis.readingTime;
+  }
+
   const { error } = await supabase
     .from("articles")
-    .update({
-      ...data,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", id);
 
   if (error) {
@@ -573,6 +620,16 @@ export async function generateArticleFromTopic(
     }
     // Si source === "none" ou non défini, pas d'image
 
+    // Analyser le SEO de l'article
+    const seoAnalysis = analyzeArticleSEO(
+      generated.content,
+      generated.title,
+      generated.summary,
+      topic,
+      imageUrl,
+      generated.faq
+    );
+
     // Vérifier que le slug est unique pour ce site
     const { data: existing } = await supabase
       .from("articles")
@@ -583,7 +640,7 @@ export async function generateArticleFromTopic(
 
     const finalSlug = existing ? `${generated.slug}-${Date.now()}` : generated.slug;
 
-    // Créer l'article
+    // Créer l'article avec les métriques SEO
     const { data: article, error: articleError } = await supabase
       .from("articles")
       .insert({
@@ -596,6 +653,13 @@ export async function generateArticleFromTopic(
         image_url: imageUrl,
         image_alt: imageAlt,
         status: "draft",
+        // Métriques SEO
+        seo_score: seoAnalysis.score,
+        word_count: seoAnalysis.wordCount,
+        heading_count: seoAnalysis.headingCount,
+        internal_links: seoAnalysis.internalLinks,
+        external_links: seoAnalysis.externalLinks,
+        reading_time: seoAnalysis.readingTime,
       })
       .select()
       .single();
@@ -609,7 +673,7 @@ export async function generateArticleFromTopic(
       site_id: siteId,
       type: "article_generated",
       message: `Article IA généré: ${generated.title}`,
-      metadata: { article_id: article.id, topic } as unknown as Json,
+      metadata: { article_id: article.id, topic, seo_score: seoAnalysis.score } as unknown as Json,
     });
 
     revalidatePath("/admin/articles");

@@ -24,6 +24,16 @@ export type SchedulerConfigUpdate = Database["public"]["Tables"]["scheduler_conf
 export type ActivityLog = Database["public"]["Tables"]["activity_logs"]["Row"];
 export type ActivityLogInsert = Database["public"]["Tables"]["activity_logs"]["Insert"];
 
+// Types SEO tracking
+export type SeoTracking = Database["public"]["Tables"]["seo_tracking"]["Row"];
+export type SeoTrackingInsert = Database["public"]["Tables"]["seo_tracking"]["Insert"];
+export type SeoTrackingUpdate = Database["public"]["Tables"]["seo_tracking"]["Update"];
+
+// Types related articles
+export type RelatedArticle = Database["public"]["Tables"]["related_articles"]["Row"];
+export type RelatedArticleInsert = Database["public"]["Tables"]["related_articles"]["Insert"];
+export type RelatedArticleUpdate = Database["public"]["Tables"]["related_articles"]["Update"];
+
 // Type pour FAQ
 export interface FAQItem {
   question: string;

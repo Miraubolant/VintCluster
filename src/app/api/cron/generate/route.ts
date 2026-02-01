@@ -5,6 +5,7 @@ import { generateImage, generateImagePrompt } from "@/lib/replicate";
 import { generateArticleWithSEO } from "@/lib/gemini";
 import { generateArticleWithSEOClaude } from "@/lib/anthropic";
 import { generateSlug } from "@/lib/utils/slug";
+import { submitArticleToIndexNow } from "@/lib/indexnow";
 import type { Database, Json } from "@/types/supabase";
 
 // Fuseau horaire pour le cron (France)
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
     // Récupérer les configurations actives pour l'heure et le jour actuels
     const { data: configs, error: configError } = await supabase
       .from("scheduler_config")
-      .select("*, site:sites(id, name)")
+      .select("*, site:sites(id, name, domain)")
       .eq("enabled", true);
 
     if (configError) {
@@ -267,6 +268,16 @@ export async function GET(request: NextRequest) {
             seo_include_table: enableSeoExpert ? seoExpertIncludeTable : null,
           } as unknown as Json,
         });
+
+        // Soumettre à IndexNow si auto-publié
+        if (config.auto_publish && article.slug) {
+          const siteDomain = (config.site as { domain?: string } | null)?.domain;
+          if (siteDomain) {
+            submitArticleToIndexNow(article.slug, siteDomain).catch((err) => {
+              console.error("IndexNow submission failed:", err);
+            });
+          }
+        }
 
         totalGenerated++;
       } catch (genError) {

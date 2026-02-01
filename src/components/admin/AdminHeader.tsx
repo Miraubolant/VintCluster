@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useMobileSidebar } from "./MobileSidebarContext";
 
 interface AdminHeaderProps {
   user: User;
@@ -21,6 +22,7 @@ interface AdminHeaderProps {
 export function AdminHeader({ user }: AdminHeaderProps) {
   const router = useRouter();
   const supabase = createClient();
+  const { toggle } = useMobileSidebar();
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -35,7 +37,13 @@ export function AdminHeader({ user }: AdminHeaderProps) {
   return (
     <header className="sticky top-0 z-40 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
       {/* Mobile menu button */}
-      <Button variant="ghost" size="icon" className="lg:hidden">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="lg:hidden"
+        onClick={toggle}
+        aria-label="Ouvrir le menu"
+      >
         <Menu className="w-5 h-5" />
       </Button>
 

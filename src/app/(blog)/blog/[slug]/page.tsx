@@ -6,8 +6,8 @@ import {
   getSiteByDomain,
   getArticleBySlug,
   getAllArticleSlugs,
-  getPublishedArticles,
 } from "@/lib/actions/blog";
+import { getCachedRelatedArticles } from "@/lib/actions/related-articles";
 import { ArticleContent, ArticleCard } from "@/components/blog";
 
 // Force dynamic rendering because we use headers() for multi-tenant domain detection
@@ -95,9 +95,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const primaryColor = site.primary_color || "#FFE500";
   const secondaryColor = site.secondary_color || "#000000";
 
-  // Récupérer les articles liés (autres articles récents)
-  const relatedArticles = await getPublishedArticles(site.id, 4);
-  const filteredRelated = relatedArticles.filter((a) => a.id !== article.id).slice(0, 3);
+  // Récupérer les articles liés sémantiquement
+  const relatedArticles = await getCachedRelatedArticles(article.id, 3);
 
   return (
     <div className="relative">
@@ -167,7 +166,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         </div>
 
         {/* Related Articles */}
-        {filteredRelated.length > 0 && (
+        {relatedArticles.length > 0 && (
           <section className="mt-24 relative">
             {/* Section background decoration */}
             <div className="absolute -inset-x-4 -inset-y-8 bg-gray-50 border-y-[4px] border-black -z-10" />
@@ -194,13 +193,22 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
               {/* Grid asymétrique */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                {filteredRelated.map((relatedArticle, index) => {
+                {relatedArticles.map((relatedArticle, index) => {
                   // Asymmetric spans for 3 items: 5, 4, 3
                   const spans = ["md:col-span-5", "md:col-span-4", "md:col-span-3"];
                   const colSpan = spans[index] || "md:col-span-4";
 
                   return (
-                    <div key={relatedArticle.id} className={colSpan}>
+                    <div key={relatedArticle.id} className={`${colSpan} relative`}>
+                      {/* Badge de relation */}
+                      {relatedArticle.reason && (
+                        <div
+                          className="absolute -top-3 left-4 z-10 px-3 py-1 text-xs font-bold uppercase border-[3px] border-black bg-white"
+                          style={{ boxShadow: `2px 2px 0px 0px ${primaryColor}` }}
+                        >
+                          {relatedArticle.reason}
+                        </div>
+                      )}
                       <ArticleCard
                         article={relatedArticle}
                         primaryColor={primaryColor}

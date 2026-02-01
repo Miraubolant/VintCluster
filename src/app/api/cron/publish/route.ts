@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { submitArticleToIndexNow } from "@/lib/indexnow";
 import type { Database, Json } from "@/types/supabase";
 
 // Créer un client Supabase avec service role pour bypasser RLS
@@ -49,10 +50,10 @@ export async function GET(request: NextRequest) {
 
     const siteIds = configs.map((c) => c.site_id);
 
-    // Récupérer les articles "ready" pour ces sites
+    // Récupérer les articles "ready" pour ces sites avec le domaine du site
     const { data: articles, error: articlesError } = await supabase
       .from("articles")
-      .select("id, site_id, title, keyword_id")
+      .select("id, site_id, title, slug, keyword_id, site:sites(domain)")
       .in("site_id", siteIds)
       .eq("status", "ready");
 
@@ -99,6 +100,14 @@ export async function GET(request: NextRequest) {
         message: `Article auto-publié: ${article.title}`,
         metadata: { article_id: article.id } as unknown as Json,
       });
+
+      // Soumettre à IndexNow pour indexation rapide
+      const siteDomain = (article.site as { domain?: string } | null)?.domain;
+      if (article.slug && siteDomain) {
+        submitArticleToIndexNow(article.slug, siteDomain).catch((err) => {
+          console.error("IndexNow submission failed:", err);
+        });
+      }
 
       published++;
     }

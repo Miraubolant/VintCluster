@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { Menu, X } from "lucide-react";
 import { useTemplate, HEADER_STYLES, isLightColor } from "./TemplateContext";
 
 interface BlogHeaderProps {
@@ -23,6 +24,7 @@ function getInitials(name: string): string {
 
 export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: BlogHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { template } = useTemplate();
 
   useEffect(() => {
@@ -30,6 +32,18 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Close mobile menu when clicking outside or navigating
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   const secondary = secondaryColor || "#000000";
   const isLight = isLightColor(primaryColor);
@@ -96,8 +110,8 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
               </div>
             </Link>
 
-            {/* Navigation */}
-            <nav>
+            {/* Desktop Navigation */}
+            <nav className="hidden md:block">
               <Link
                 href="/blog"
                 className={styles.navButton}
@@ -106,9 +120,88 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
                 Blog
               </Link>
             </nav>
+
+            {/* Mobile Menu Button */}
+            <button
+              className="md:hidden p-2 -mr-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            >
+              {mobileMenuOpen ? (
+                <X
+                  className="w-6 h-6"
+                  style={{ color: isLight ? "#000" : "#FFF" }}
+                />
+              ) : (
+                <Menu
+                  className="w-6 h-6"
+                  style={{ color: isLight ? "#000" : "#FFF" }}
+                />
+              )}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-50"
+          style={{ top: template === "brutal" ? "calc(8px + 60px)" : "60px" }}
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Menu Panel */}
+          <nav
+            className={`relative mx-4 mt-2 p-6 ${
+              template === "brutal"
+                ? "bg-white border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+                : template === "minimal"
+                ? "bg-white rounded-lg shadow-lg"
+                : template === "magazine"
+                ? "bg-white border-2 border-gray-900"
+                : template === "tech"
+                ? "bg-white rounded-xl shadow-xl border border-gray-200"
+                : "bg-white rounded-2xl shadow-xl"
+            }`}
+          >
+            <Link
+              href="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block py-3 text-lg font-bold ${
+                template === "brutal"
+                  ? "uppercase border-b-[3px] border-black"
+                  : template === "minimal"
+                  ? "text-gray-900 border-b border-gray-100"
+                  : template === "tech"
+                  ? "font-mono text-gray-900 border-b border-gray-200"
+                  : "text-gray-900 border-b border-gray-200"
+              }`}
+            >
+              Accueil
+            </Link>
+            <Link
+              href="/blog"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block py-3 text-lg font-bold ${
+                template === "brutal"
+                  ? "uppercase"
+                  : template === "minimal"
+                  ? "text-gray-900"
+                  : template === "tech"
+                  ? "font-mono text-gray-900"
+                  : "text-gray-900"
+              }`}
+            >
+              Blog
+            </Link>
+          </nav>
+        </div>
+      )}
 
       {/* Bottom accent line */}
       {styles.bottomBar && <div className={styles.bottomBar} />}

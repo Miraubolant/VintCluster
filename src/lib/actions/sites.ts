@@ -19,6 +19,8 @@ const siteSchema = z.object({
   meta_title: z.string().optional(),
   meta_description: z.string().optional(),
   template: z.enum(["brutal", "minimal", "magazine", "tech", "fresh"]).optional(),
+  webhook_url: z.string().url().optional().or(z.literal("")),
+  webhook_enabled: z.boolean().optional(),
 });
 
 export type SiteFormData = z.infer<typeof siteSchema>;
@@ -45,6 +47,8 @@ export async function createSite(formData: SiteFormData): Promise<{ data?: Site;
       meta_title: result.data.meta_title || null,
       meta_description: result.data.meta_description || null,
       template: result.data.template || "brutal",
+      webhook_url: result.data.webhook_url || null,
+      webhook_enabled: result.data.webhook_enabled || false,
     })
     .select()
     .single();
@@ -82,6 +86,8 @@ export async function updateSite(id: string, formData: SiteFormData): Promise<{ 
       meta_title: result.data.meta_title || null,
       meta_description: result.data.meta_description || null,
       template: result.data.template || "brutal",
+      webhook_url: result.data.webhook_url || null,
+      webhook_enabled: result.data.webhook_enabled || false,
     })
     .eq("id", id)
     .select()
