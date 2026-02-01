@@ -67,7 +67,7 @@ export async function GET() {
       <link>https://${site.domain}/blog/${article.slug}</link>
       <guid isPermaLink="true">https://${site.domain}/blog/${article.slug}</guid>
       <description><![CDATA[${truncate(article.summary || "", 300)}]]></description>
-      <pubDate>${new Date(article.published_at || article.created_at || new Date()).toUTCString()}</pubDate>
+      <pubDate>${new Date(article.published_at || new Date()).toUTCString()}</pubDate>
       ${article.image_url ? `<enclosure url="${article.image_url}" type="image/webp" length="0"/>
       <media:content url="${article.image_url}" medium="image"/>` : ""}
     </item>`
