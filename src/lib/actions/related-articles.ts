@@ -236,7 +236,7 @@ async function computeRelatedArticlesOnTheFly(
     summary: a.summary,
     image_url: a.image_url,
     image_alt: a.image_alt,
-    published_at: a.published_at,
+    published_at: a.published_at || new Date().toISOString(),
     updated_at: a.updated_at,
     faq: (a.faq as { question: string; answer: string }[] | null) || [],
     score: a.score,
