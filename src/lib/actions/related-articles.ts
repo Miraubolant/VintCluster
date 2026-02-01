@@ -182,12 +182,14 @@ async function computeRelatedArticlesOnTheFly(
     }
 
     // Bonus de récence (+10 pts si publié dans les 30 derniers jours)
-    const publishedDate = new Date(candidate.published_at);
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    if (publishedDate > thirtyDaysAgo) {
-      score += 10;
-      reasons.push("récent");
+    if (candidate.published_at) {
+      const publishedDate = new Date(candidate.published_at);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      if (publishedDate > thirtyDaysAgo) {
+        score += 10;
+        reasons.push("récent");
+      }
     }
 
     return {
