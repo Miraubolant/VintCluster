@@ -177,23 +177,27 @@ export async function GET(request: NextRequest) {
 
         // Générer l'article
         const cluster = keyword.cluster || keyword.site_key || undefined;
-        let generated;
+        let generated: { title: string; slug: string; content: string; summary: string; faq: Array<{ question: string; answer: string }> };
 
         if (enableSeoExpert) {
           // Génération directe avec SEO Expert (Gemini ou Claude)
+          let seoResult;
           if (seoExpertModel === "claude") {
-            generated = await generateArticleWithSEOClaude(keyword.keyword, {
+            seoResult = await generateArticleWithSEOClaude(keyword.keyword, {
               cluster,
               includeTable: seoExpertIncludeTable,
             });
           } else {
-            generated = await generateArticleWithSEO(keyword.keyword, {
+            seoResult = await generateArticleWithSEO(keyword.keyword, {
               cluster,
               includeTable: seoExpertIncludeTable,
             });
           }
           // Ajouter le slug qui n'est pas généré par SEO Expert
-          (generated as { slug?: string }).slug = generateSlug(generated.title);
+          generated = {
+            ...seoResult,
+            slug: generateSlug(seoResult.title),
+          };
         } else {
           // Génération standard avec OpenAI
           generated = await generateArticle(keyword.keyword, cluster);
