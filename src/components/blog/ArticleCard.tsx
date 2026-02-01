@@ -3,11 +3,22 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Clock } from "lucide-react";
-import type { PublicArticle } from "@/lib/actions/blog";
-import { useTemplate, CARD_STYLES, isLightColor } from "./TemplateContext";
+import { useTemplate, CARD_STYLES } from "./TemplateContext";
+
+// Type minimal pour ArticleCard (n'a pas besoin de site car colors viennent en props)
+interface ArticleForCard {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  summary: string | null;
+  image_url: string | null;
+  image_alt: string | null;
+  published_at: string;
+}
 
 interface ArticleCardProps {
-  article: PublicArticle;
+  article: ArticleForCard;
   primaryColor: string;
   secondaryColor?: string;
   featured?: boolean;
