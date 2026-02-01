@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Globe, FileText, Tag, TrendingUp, BarChart3, AlertTriangle, MousePointerClick, Target } from "lucide-react";
+import { Globe, FileText, Tag, TrendingUp, BarChart3, AlertTriangle, MousePointerClick, Target, Wrench } from "lucide-react";
 import Link from "next/link";
+import { RecalculateSEOButton } from "@/components/admin/RecalculateSEOButton";
 
 async function getStats() {
   const supabase = await createClient();
@@ -259,6 +260,31 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* SEO Tools */}
+      <Card className="border-gray-200 shadow-sm">
+        <CardHeader className="flex flex-row items-center gap-2">
+          <div className="p-2 rounded-lg bg-indigo-50">
+            <Wrench className="w-4 h-4 text-indigo-600" />
+          </div>
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            Outils SEO
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Recalculer les scores SEO et articles connexes
+              </h3>
+              <p className="text-sm text-gray-500 mb-3">
+                Met à jour les scores SEO et calcule les relations entre articles pour les articles existants.
+              </p>
+              <RecalculateSEOButton />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card className="border-gray-200 shadow-sm">

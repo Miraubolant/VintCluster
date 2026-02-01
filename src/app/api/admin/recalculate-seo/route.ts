@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import { analyzeArticleSEO } from "@/lib/seo";
 import { computeAndStoreRelatedArticles } from "@/lib/actions/related-articles";
 import type { Database } from "@/types/supabase";
@@ -16,12 +17,24 @@ function getServiceClient() {
   return createClient<Database>(supabaseUrl, serviceRoleKey);
 }
 
-export async function POST(request: NextRequest) {
-  // Vérifier le secret
+// Vérifier l'authentification (CRON_SECRET ou session utilisateur)
+async function isAuthenticated(request: NextRequest): Promise<boolean> {
+  // 1. Vérifier CRON_SECRET
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    return true;
+  }
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  // 2. Vérifier session utilisateur
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return !!user;
+}
+
+export async function POST(request: NextRequest) {
+  // Vérifier l'authentification
+  if (!(await isAuthenticated(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -139,10 +152,8 @@ export async function POST(request: NextRequest) {
 
 // GET pour voir les stats actuelles
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  // Vérifier l'authentification
+  if (!(await isAuthenticated(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
