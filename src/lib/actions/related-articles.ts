@@ -29,28 +29,43 @@ export async function getRelatedArticles(
   const supabase = await createClient();
 
   // D'abord, essayer de récupérer les relations pré-calculées
-  const { data: precomputed } = await supabase
-    .from("related_articles")
-    .select(`
-      score,
-      reason,
-      related:related_article_id(
-        id,
-        title,
-        slug,
-        content,
-        summary,
-        image_url,
-        image_alt,
-        published_at,
-        updated_at,
-        faq,
-        status
-      )
-    `)
-    .eq("article_id", articleId)
-    .order("score", { ascending: false })
-    .limit(limit);
+  // (avec try-catch au cas où la table n'existe pas encore)
+  let precomputed: Array<{
+    score: number;
+    reason: string | null;
+    related: unknown;
+  }> | null = null;
+
+  try {
+    const { data, error } = await supabase
+      .from("related_articles")
+      .select(`
+        score,
+        reason,
+        related:related_article_id(
+          id,
+          title,
+          slug,
+          content,
+          summary,
+          image_url,
+          image_alt,
+          published_at,
+          updated_at,
+          faq,
+          status
+        )
+      `)
+      .eq("article_id", articleId)
+      .order("score", { ascending: false })
+      .limit(limit);
+
+    if (!error) {
+      precomputed = data;
+    }
+  } catch {
+    // Table doesn't exist yet, fall through to on-the-fly calculation
+  }
 
   if (precomputed && precomputed.length > 0) {
     return precomputed
