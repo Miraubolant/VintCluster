@@ -20,91 +20,21 @@ export interface RelatedArticleResult {
 
 /**
  * Récupère les articles connexes d'un article donné
- * Utilise les relations pré-calculées ou calcule à la volée
+ * Retourne un tableau vide si la fonctionnalité n'est pas disponible
+ * (migration non exécutée ou erreur)
  */
 export async function getRelatedArticles(
   articleId: string,
   limit: number = 3
 ): Promise<RelatedArticleResult[]> {
-  const supabase = await createClient();
-
-  // D'abord, essayer de récupérer les relations pré-calculées
-  // (avec try-catch au cas où la table n'existe pas encore)
-  let precomputed: Array<{
-    score: number | null;
-    reason: string | null;
-    related: unknown;
-  }> | null = null;
-
   try {
-    const { data, error } = await supabase
-      .from("related_articles")
-      .select(`
-        score,
-        reason,
-        related:articles!related_article_id(
-          id,
-          title,
-          slug,
-          content,
-          summary,
-          image_url,
-          image_alt,
-          published_at,
-          updated_at,
-          faq,
-          status
-        )
-      `)
-      .eq("article_id", articleId)
-      .order("score", { ascending: false })
-      .limit(limit);
-
-    if (!error) {
-      precomputed = data;
-    }
+    // Calculer à la volée (simple et fiable)
+    return await computeRelatedArticlesOnTheFly(articleId, limit);
   } catch {
-    // Table doesn't exist yet, fall through to on-the-fly calculation
+    // En cas d'erreur, retourner un tableau vide
+    // (la fonctionnalité sera disponible après la migration)
+    return [];
   }
-
-  if (precomputed && precomputed.length > 0) {
-    return precomputed
-      .filter((r) => {
-        const related = r.related as unknown as { status: string } | null;
-        return related && related.status === "published";
-      })
-      .map((r) => {
-        const related = r.related as unknown as {
-          id: string;
-          title: string;
-          slug: string;
-          content: string;
-          summary: string | null;
-          image_url: string | null;
-          image_alt: string | null;
-          published_at: string;
-          updated_at: string | null;
-          faq: { question: string; answer: string }[] | null;
-        };
-        return {
-          id: related.id,
-          title: related.title,
-          slug: related.slug,
-          content: related.content,
-          summary: related.summary,
-          image_url: related.image_url,
-          image_alt: related.image_alt,
-          published_at: related.published_at,
-          updated_at: related.updated_at,
-          faq: related.faq || [],
-          score: Number(r.score) || 0,
-          reason: r.reason || "related",
-        };
-      });
-  }
-
-  // Sinon, calculer à la volée et retourner les résultats
-  return computeRelatedArticlesOnTheFly(articleId, limit);
 }
 
 /**
