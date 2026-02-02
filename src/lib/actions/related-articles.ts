@@ -31,7 +31,7 @@ export async function getRelatedArticles(
   // D'abord, essayer de récupérer les relations pré-calculées
   // (avec try-catch au cas où la table n'existe pas encore)
   let precomputed: Array<{
-    score: number;
+    score: number | null;
     reason: string | null;
     related: unknown;
   }> | null = null;
@@ -42,7 +42,7 @@ export async function getRelatedArticles(
       .select(`
         score,
         reason,
-        related:related_article_id(
+        related:articles!related_article_id(
           id,
           title,
           slug,
