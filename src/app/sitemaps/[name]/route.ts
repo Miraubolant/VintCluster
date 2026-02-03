@@ -198,7 +198,10 @@ ${urls.join("\n")}
   return new NextResponse(xml, {
     headers: {
       "Content-Type": "application/xml",
-      "Cache-Control": "public, max-age=86400, s-maxage=86400",
+      // Cache agressif: 7 jours CDN, 1 jour navigateur, sert le cache périmé pendant 1 jour de revalidation
+      "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400",
+      "CDN-Cache-Control": "public, max-age=604800",
+      "Vercel-CDN-Cache-Control": "public, max-age=604800",
     },
   });
 }

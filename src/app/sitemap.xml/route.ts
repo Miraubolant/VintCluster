@@ -52,7 +52,9 @@ ${sitemaps.map(url => `<sitemap>
   return new NextResponse(xml, {
     headers: {
       "Content-Type": "application/xml",
-      "Cache-Control": "public, max-age=3600, s-maxage=3600",
+      // Cache agressif: 7 jours CDN, 1 jour navigateur
+      "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400",
+      "CDN-Cache-Control": "public, max-age=604800",
     },
   });
 }
