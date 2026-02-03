@@ -4,34 +4,32 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getCitiesByDepartment,
   getDepartmentBySlug,
-  getAllDepartments,
-  departmentToSlug,
 } from "@/lib/cities";
 
 export const dynamic = "force-dynamic";
 
 interface RouteParams {
-  params: Promise<{ sitemap: string }>;
+  params: Promise<{ name: string }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  const { sitemap } = await params;
+  const { name } = await params;
 
-  // Parse le nom du sitemap
-  const cleanName = sitemap.replace(".xml", "");
+  // Parse le nom du sitemap (enlever .xml si présent)
+  const cleanName = name.replace(".xml", "");
 
   // Vérifier quel type de sitemap est demandé
-  if (cleanName === "sitemap-main") {
+  if (cleanName === "main") {
     return handleMainSitemap();
   }
 
-  if (cleanName.startsWith("sitemap-villes-")) {
-    const depSlug = cleanName.replace("sitemap-villes-", "");
+  if (cleanName.startsWith("villes-")) {
+    const depSlug = cleanName.replace("villes-", "");
     return handleVillesSitemap(depSlug);
   }
 
-  if (cleanName.startsWith("sitemap-articles-")) {
-    const depSlug = cleanName.replace("sitemap-articles-", "");
+  if (cleanName.startsWith("articles-")) {
+    const depSlug = cleanName.replace("articles-", "");
     return handleArticlesSitemap(depSlug);
   }
 

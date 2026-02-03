@@ -31,15 +31,15 @@ export async function GET() {
   const sitemaps: string[] = [];
 
   // 1. Sitemap principal (homepage, blog, articles)
-  sitemaps.push(`${baseUrl}/sitemap-main.xml`);
+  sitemaps.push(`${baseUrl}/sitemaps/main.xml`);
 
   // 2. Pour chaque département : sitemap-villes et sitemap-articles
   departments.forEach((dep) => {
     const depSlug = departmentToSlug(dep);
     // Sitemap des villes du département (pages hub)
-    sitemaps.push(`${baseUrl}/sitemap-villes-${depSlug}.xml`);
+    sitemaps.push(`${baseUrl}/sitemaps/villes-${depSlug}.xml`);
     // Sitemap des articles localisés (ville × article)
-    sitemaps.push(`${baseUrl}/sitemap-articles-${depSlug}.xml`);
+    sitemaps.push(`${baseUrl}/sitemaps/articles-${depSlug}.xml`);
   });
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
