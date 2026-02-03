@@ -1,62 +1,30 @@
 import { MetadataRoute } from "next";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { getTopCitiesByPopulation, getCitiesCount } from "@/lib/cities";
+import { getTopCitiesByPopulation } from "@/lib/cities";
 
 // Nombre max d'URLs par sitemap (Google limite à 50,000)
 const URLS_PER_SITEMAP = 45000;
 
+// Nombre de villes pour les combinaisons (5000 villes × ~300 articles = ~1.5M pages)
+const TOP_CITIES_FOR_COMBINATIONS = 5000;
+
+// Estimation du nombre max de sitemaps nécessaires
+// 5000 villes × 500 articles max / 45000 = ~56 sitemaps
+const MAX_SITEMAPS = 60;
+
 /**
  * Génère la liste des sitemaps pour le sitemap index
- * Utilisé par Next.js pour créer /sitemap.xml qui liste tous les sitemaps
+ * Note: Ne peut pas utiliser headers() ici car exécuté au build time
  */
 export async function generateSitemaps() {
-  const headersList = await headers();
-  const host = headersList.get("x-current-host") || headersList.get("host") || "";
-  const currentDomain = host.split(":")[0].toLowerCase().replace(/^www\./, "");
-
-  const supabase = await createClient();
-
-  // Récupérer le site et compter les articles
-  const { data: site } = await supabase
-    .from("sites")
-    .select("id")
-    .eq("domain", currentDomain)
-    .single();
-
-  if (!site) {
-    return [{ id: 0 }];
-  }
-
-  const { count: articlesCount } = await supabase
-    .from("articles")
-    .select("*", { count: "exact", head: true })
-    .eq("site_id", site.id)
-    .eq("status", "published");
-
-  const citiesCount = getCitiesCount();
-  const totalArticles = articlesCount || 0;
-
-  // Calcul du nombre de sitemaps nécessaires
-  // Sitemap 0: pages statiques + articles + villes seules (max 15k URLs)
-  // Sitemaps 1+: combinaisons ville × article
-
-  const staticAndArticlesUrls = 2 + totalArticles + Math.min(citiesCount, 10000); // home + blog + articles + top villes
-  const cityArticleCombinations = citiesCount * totalArticles;
-
-  // Premier sitemap pour contenu principal
-  const sitemaps = [{ id: 0 }];
-
-  // Sitemaps additionnels pour les combinaisons ville × article
-  // On limite aux top 5000 villes pour rester raisonnable (5000 × 300 articles = 1.5M pages)
-  const topCitiesForCombinations = 5000;
-  const combinationsToIndex = topCitiesForCombinations * totalArticles;
-  const additionalSitemaps = Math.ceil(combinationsToIndex / URLS_PER_SITEMAP);
-
-  for (let i = 1; i <= additionalSitemaps; i++) {
+  // Générer un nombre fixe de sitemaps
+  // Le sitemap 0 contiendra les pages principales
+  // Les sitemaps 1+ contiendront les combinaisons ville × article
+  const sitemaps = [];
+  for (let i = 0; i <= MAX_SITEMAPS; i++) {
     sitemaps.push({ id: i });
   }
-
   return sitemaps;
 }
 
@@ -145,13 +113,18 @@ export default async function sitemap({
     return [];
   }
 
-  // Top 5000 villes pour les combinaisons
-  const topCities = getTopCitiesByPopulation(5000);
+  // Top villes pour les combinaisons
+  const topCities = getTopCitiesByPopulation(TOP_CITIES_FOR_COMBINATIONS);
   const totalCombinations = topCities.length * articles.length;
 
   // Calculer l'offset pour ce sitemap
   const startIndex = (id - 1) * URLS_PER_SITEMAP;
   const endIndex = Math.min(startIndex + URLS_PER_SITEMAP, totalCombinations);
+
+  // Si cet index dépasse le total, retourner vide
+  if (startIndex >= totalCombinations) {
+    return [];
+  }
 
   // Générer les URLs pour cette tranche
   for (let i = startIndex; i < endIndex; i++) {
