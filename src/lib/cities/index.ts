@@ -141,6 +141,26 @@ export function getAllDepartments(): string[] {
 }
 
 /**
+ * Convertit un nom de département en slug URL-friendly
+ */
+export function departmentToSlug(depNom: string): string {
+  return depNom
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * Trouve un département par son slug
+ */
+export function getDepartmentBySlug(slug: string): string | undefined {
+  const departments = getAllDepartments();
+  return departments.find((dep) => departmentToSlug(dep) === slug);
+}
+
+/**
  * Retourne les régions uniques
  */
 export function getAllRegions(): string[] {

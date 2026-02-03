@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { getAllRegions } from "@/lib/cities";
+import { getAllDepartments, departmentToSlug } from "@/lib/cities";
 
 export const dynamic = "force-dynamic";
-
-const URLS_PER_SITEMAP = 45000;
-const CITIES_FOR_LOCAL_PAGES = 5000;
 
 export async function GET() {
   const headersList = await headers();
@@ -27,54 +24,29 @@ export async function GET() {
 
   const baseUrl = `https://${site.domain}`;
 
-  // Compter les articles
-  const { count: articlesCount } = await supabase
-    .from("articles")
-    .select("*", { count: "exact", head: true })
-    .eq("site_id", site.id)
-    .eq("status", "published");
-
-  const totalArticles = articlesCount || 0;
-  const totalLocalPages = CITIES_FOR_LOCAL_PAGES * totalArticles;
-  const localSitemapsCount = Math.ceil(totalLocalPages / URLS_PER_SITEMAP);
-
-  // Récupérer toutes les régions
-  const regions = getAllRegions();
+  // Récupérer tous les départements
+  const departments = getAllDepartments();
 
   // Construire la liste des sitemaps
   const sitemaps: string[] = [];
 
-  // 1. Sitemap des articles (priorité haute)
-  sitemaps.push(`${baseUrl}/sitemaps/articles.xml`);
+  // 1. Sitemap principal (homepage, blog, articles)
+  sitemaps.push(`${baseUrl}/sitemap-main.xml`);
 
-  // 2. Sitemap des hubs villes (priorité moyenne-haute)
-  sitemaps.push(`${baseUrl}/sitemaps/cities-hub.xml`);
-
-  // 3. Index des régions (maillage géographique)
-  sitemaps.push(`${baseUrl}/sitemaps/regions/index.xml`);
-
-  // 4. Sitemaps par région (18 régions françaises)
-  regions.forEach((region) => {
-    const regionSlug = region
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-    sitemaps.push(`${baseUrl}/sitemaps/regions/${regionSlug}.xml`);
+  // 2. Pour chaque département : sitemap-villes et sitemap-articles
+  departments.forEach((dep) => {
+    const depSlug = departmentToSlug(dep);
+    // Sitemap des villes du département (pages hub)
+    sitemaps.push(`${baseUrl}/sitemap-villes-${depSlug}.xml`);
+    // Sitemap des articles localisés (ville × article)
+    sitemaps.push(`${baseUrl}/sitemap-articles-${depSlug}.xml`);
   });
-
-  // 5. Sitemaps locaux paginés (ville × article)
-  for (let i = 1; i <= Math.min(localSitemapsCount, 200); i++) {
-    sitemaps.push(`${baseUrl}/sitemaps/local/${i}.xml`);
-  }
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${sitemaps.map(url => `  <sitemap>
-    <loc>${url}</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-  </sitemap>`).join("\n")}
+${sitemaps.map(url => `<sitemap>
+<loc>${url}</loc>
+</sitemap>`).join("\n")}
 </sitemapindex>`;
 
   return new NextResponse(xml, {
