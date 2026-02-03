@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { getTopCitiesByPopulation } from "@/lib/cities";
+import { getAllRegions } from "@/lib/cities";
 
 export const dynamic = "force-dynamic";
 
-// Configuration
 const URLS_PER_SITEMAP = 45000;
 const CITIES_FOR_LOCAL_PAGES = 5000;
 
@@ -28,7 +27,7 @@ export async function GET() {
 
   const baseUrl = `https://${site.domain}`;
 
-  // Compter les articles pour calculer le nombre de sitemaps locaux nécessaires
+  // Compter les articles
   const { count: articlesCount } = await supabase
     .from("articles")
     .select("*", { count: "exact", head: true })
@@ -39,14 +38,34 @@ export async function GET() {
   const totalLocalPages = CITIES_FOR_LOCAL_PAGES * totalArticles;
   const localSitemapsCount = Math.ceil(totalLocalPages / URLS_PER_SITEMAP);
 
-  // Générer le sitemap index XML
-  const sitemaps = [
-    `${baseUrl}/sitemaps/main.xml`,
-    `${baseUrl}/sitemaps/cities.xml`,
-  ];
+  // Récupérer toutes les régions
+  const regions = getAllRegions();
 
-  // Ajouter les sitemaps locaux paginés
-  for (let i = 1; i <= Math.min(localSitemapsCount, 100); i++) {
+  // Construire la liste des sitemaps
+  const sitemaps: string[] = [];
+
+  // 1. Sitemap des articles (priorité haute)
+  sitemaps.push(`${baseUrl}/sitemaps/articles.xml`);
+
+  // 2. Sitemap des hubs villes (priorité moyenne-haute)
+  sitemaps.push(`${baseUrl}/sitemaps/cities-hub.xml`);
+
+  // 3. Index des régions (maillage géographique)
+  sitemaps.push(`${baseUrl}/sitemaps/regions/index.xml`);
+
+  // 4. Sitemaps par région (18 régions françaises)
+  regions.forEach((region) => {
+    const regionSlug = region
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    sitemaps.push(`${baseUrl}/sitemaps/regions/${regionSlug}.xml`);
+  });
+
+  // 5. Sitemaps locaux paginés (ville × article)
+  for (let i = 1; i <= Math.min(localSitemapsCount, 200); i++) {
     sitemaps.push(`${baseUrl}/sitemaps/local/${i}.xml`);
   }
 
