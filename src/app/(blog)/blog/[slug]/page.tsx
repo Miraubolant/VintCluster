@@ -5,10 +5,11 @@ import Link from "next/link";
 import {
   getSiteByDomain,
   getArticleBySlug,
-  getAllArticleSlugs,
 } from "@/lib/actions/blog";
 import { getCachedRelatedArticles } from "@/lib/actions/related-articles";
-import { ArticleContent, ArticleCard } from "@/components/blog";
+import { ArticleContent, ArticleCard, TemplateLinkButton } from "@/components/blog";
+import { isLightColor, colorWithOpacity } from "@/components/blog/TemplateContext";
+import type { SiteTemplate } from "@/types/database";
 
 // Force dynamic rendering because we use headers() for multi-tenant domain detection
 export const dynamic = "force-dynamic";
@@ -92,41 +93,147 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     notFound();
   }
 
+  const template = (site.template || "brutal") as SiteTemplate;
   const primaryColor = site.primary_color || "#FFE500";
   const secondaryColor = site.secondary_color || "#000000";
 
   // Récupérer les articles liés sémantiquement
   const relatedArticles = await getCachedRelatedArticles(article.id, 3);
 
+  // Template-specific styles
+  const getPageBgClass = () => {
+    switch (template) {
+      case "fresh":
+        return "bg-gray-950";
+      case "magazine":
+        return "bg-gray-50";
+      default:
+        return "bg-white";
+    }
+  };
+
+  const getBreadcrumbClass = () => {
+    switch (template) {
+      case "brutal":
+        return "bg-white border-b-[4px] border-black";
+      case "minimal":
+        return "bg-white border-b border-gray-100";
+      case "magazine":
+        return "bg-white border-b-4";
+      case "tech":
+        return "bg-white border-b border-gray-200";
+      case "fresh":
+        return "bg-gray-900 border-b border-gray-800";
+      default:
+        return "";
+    }
+  };
+
+  const getBreadcrumbStyle = (): React.CSSProperties => {
+    if (template === "magazine") {
+      return { borderColor: primaryColor };
+    }
+    return {};
+  };
+
+  const getLinkClass = () => {
+    switch (template) {
+      case "brutal":
+        return "group inline-flex items-center gap-2 font-bold text-black hover:underline decoration-2 underline-offset-2";
+      case "minimal":
+        return "text-gray-500 hover:text-gray-900 transition-colors";
+      case "magazine":
+        return "font-bold text-gray-900 hover:underline";
+      case "tech":
+        return "text-gray-600 hover:text-gray-900 transition-colors";
+      case "fresh":
+        return "text-gray-400 hover:text-white transition-colors";
+      default:
+        return "";
+    }
+  };
+
+  const getSeparatorClass = () => {
+    switch (template) {
+      case "brutal":
+        return "text-black font-bold";
+      case "fresh":
+        return "text-gray-600";
+      default:
+        return "text-gray-400";
+    }
+  };
+
+  const getCurrentPageClass = () => {
+    switch (template) {
+      case "brutal":
+        return "text-gray-600 truncate max-w-[200px] md:max-w-xs font-medium";
+      case "fresh":
+        return "text-gray-500 truncate max-w-[200px] md:max-w-xs";
+      default:
+        return "text-gray-400 truncate max-w-[200px] md:max-w-xs";
+    }
+  };
+
+  const getRelatedSectionClass = () => {
+    switch (template) {
+      case "brutal":
+        return "mt-24 relative";
+      case "minimal":
+        return "mt-20 pt-16 border-t border-gray-100";
+      case "magazine":
+        return "mt-20 pt-12 border-t-4";
+      case "tech":
+        return "mt-20 pt-12 bg-gray-50 -mx-4 px-4 rounded-3xl";
+      case "fresh":
+        return "mt-20 pt-12 border-t border-gray-800";
+      default:
+        return "";
+    }
+  };
+
+  const getRelatedTitleClass = () => {
+    switch (template) {
+      case "brutal":
+        return "text-2xl md:text-3xl font-black uppercase text-black tracking-tight";
+      case "minimal":
+        return "text-xl font-light text-gray-800";
+      case "magazine":
+        return "text-2xl font-extrabold text-gray-900";
+      case "tech":
+        return "text-xl font-semibold text-gray-900";
+      case "fresh":
+        return "text-2xl font-bold text-white";
+      default:
+        return "";
+    }
+  };
+
   return (
-    <div className="relative">
+    <div className={`relative ${getPageBgClass()}`}>
       {/* Breadcrumb */}
-      <nav className="bg-white border-b-[4px] border-black">
+      <nav className={getBreadcrumbClass()} style={getBreadcrumbStyle()}>
         <div className="container mx-auto px-4 py-4">
           <ol className="flex items-center gap-2 text-sm flex-wrap">
             <li>
-              <Link
-                href="/"
-                className="group inline-flex items-center gap-2 font-bold text-black hover:underline decoration-2 underline-offset-2"
-              >
-                <div
-                  className="w-4 h-4 border-2 border-black group-hover:rotate-45 transition-transform"
-                  style={{ backgroundColor: primaryColor }}
-                />
+              <Link href="/" className={getLinkClass()}>
+                {template === "brutal" && (
+                  <div
+                    className="w-4 h-4 border-2 border-black group-hover:rotate-45 transition-transform"
+                    style={{ backgroundColor: primaryColor }}
+                  />
+                )}
                 Accueil
               </Link>
             </li>
-            <li className="text-black font-bold">/</li>
+            <li className={getSeparatorClass()}>/</li>
             <li>
-              <Link
-                href="/blog"
-                className="font-bold text-black hover:underline decoration-2 underline-offset-2"
-              >
+              <Link href="/blog" className={getLinkClass()}>
                 Blog
               </Link>
             </li>
-            <li className="text-black font-bold">/</li>
-            <li className="text-gray-600 truncate max-w-[200px] md:max-w-xs font-medium">
+            <li className={getSeparatorClass()}>/</li>
+            <li className={getCurrentPageClass()}>
               {article.title}
             </li>
           </ol>
@@ -144,77 +251,125 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
         {/* Back Link */}
         <div className="max-w-4xl mx-auto mt-20 relative">
-          {/* Decorative line */}
-          <div className="absolute top-1/2 left-0 right-0 h-[4px] bg-black -translate-y-1/2" />
+          {/* Decorative line for brutal */}
+          {template === "brutal" && (
+            <div className="absolute top-1/2 left-0 right-0 h-[4px] bg-black -translate-y-1/2" />
+          )}
 
-          <div className="relative flex justify-start">
-            <Link
-              href="/blog"
-              className="group inline-flex items-center gap-0 bg-white"
-            >
-              <div
-                className="px-4 py-3 border-[5px] border-black border-r-0 flex items-center group-hover:bg-black group-hover:text-white transition-colors"
-                style={{ backgroundColor: primaryColor }}
+          <div className={`relative ${template === "brutal" ? "flex justify-start" : "flex justify-center"}`}>
+            {template === "brutal" ? (
+              <Link
+                href="/blog"
+                className="group inline-flex items-center gap-0 bg-white"
               >
-                <span className="text-xl font-black group-hover:-translate-x-1 transition-transform inline-block">&larr;</span>
-              </div>
-              <span className="px-6 py-3 font-black uppercase text-sm tracking-wider bg-white border-[5px] border-black transition-all group-hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group-hover:-translate-x-0.5 group-hover:-translate-y-0.5">
-                Retour aux articles
-              </span>
-            </Link>
+                <div
+                  className="px-4 py-3 border-[5px] border-black border-r-0 flex items-center group-hover:bg-black group-hover:text-white transition-colors"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  <span className="text-xl font-black group-hover:-translate-x-1 transition-transform inline-block">←</span>
+                </div>
+                <span className="px-6 py-3 font-black uppercase text-sm tracking-wider bg-white border-[5px] border-black transition-all group-hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group-hover:-translate-x-0.5 group-hover:-translate-y-0.5">
+                  Retour aux articles
+                </span>
+              </Link>
+            ) : (
+              <TemplateLinkButton
+                href="/blog"
+                template={template}
+                primaryColor={primaryColor}
+                secondaryColor={secondaryColor}
+                variant={template === "minimal" ? "ghost" : "primary"}
+              >
+                <span>←</span>
+                <span>Retour aux articles</span>
+              </TemplateLinkButton>
+            )}
           </div>
         </div>
 
         {/* Related Articles */}
         {relatedArticles.length > 0 && (
-          <section className="mt-24 relative">
-            {/* Section background decoration */}
-            <div className="absolute -inset-x-4 -inset-y-8 bg-gray-50 border-y-[4px] border-black -z-10" />
+          <section
+            className={getRelatedSectionClass()}
+            style={template === "magazine" ? { borderColor: primaryColor } : {}}
+          >
+            {/* Section background decoration for brutal */}
+            {template === "brutal" && (
+              <div className="absolute -inset-x-4 -inset-y-8 bg-gray-50 border-y-[4px] border-black -z-10" />
+            )}
 
             <div className="max-w-6xl mx-auto">
               {/* Section header */}
-              <div className="flex items-center gap-4 mb-10">
-                <div
-                  className="w-14 h-14 flex items-center justify-center border-[5px] border-black rotate-45"
-                  style={{ backgroundColor: secondaryColor }}
-                >
-                  <span className="text-2xl font-black text-white -rotate-45">+</span>
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl md:text-3xl font-black uppercase text-black tracking-tight">
+              <div className={`flex items-center gap-4 mb-10 ${template === "minimal" ? "justify-center" : ""}`}>
+                {template === "brutal" && (
+                  <div
+                    className="w-14 h-14 flex items-center justify-center border-[5px] border-black rotate-45"
+                    style={{ backgroundColor: secondaryColor }}
+                  >
+                    <span className="text-2xl font-black text-white -rotate-45">+</span>
+                  </div>
+                )}
+                {template === "fresh" && (
+                  <div
+                    className="w-12 h-12 flex items-center justify-center rounded-2xl"
+                    style={{
+                      background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+                      boxShadow: `0 8px 30px ${colorWithOpacity(primaryColor, 0.3)}`,
+                    }}
+                  >
+                    <span className="text-xl font-bold text-white">+</span>
+                  </div>
+                )}
+                <div className={template === "brutal" ? "flex-1" : ""}>
+                  <h2 className={getRelatedTitleClass()}>
                     Articles similaires
                   </h2>
-                  <div
-                    className="h-[5px] mt-2 w-32"
-                    style={{ backgroundColor: primaryColor }}
-                  />
+                  {template === "brutal" && (
+                    <div
+                      className="h-[5px] mt-2 w-32"
+                      style={{ backgroundColor: primaryColor }}
+                    />
+                  )}
                 </div>
               </div>
 
-              {/* Grid asymétrique */}
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              {/* Grid */}
+              <div className={`grid gap-6 ${
+                template === "brutal" || template === "magazine"
+                  ? "grid-cols-1 md:grid-cols-12"
+                  : "grid-cols-1 md:grid-cols-3"
+              }`}>
                 {relatedArticles.map((relatedArticle, index) => {
-                  // Asymmetric spans for 3 items: 5, 4, 3
-                  const spans = ["md:col-span-5", "md:col-span-4", "md:col-span-3"];
-                  const colSpan = spans[index] || "md:col-span-4";
+                  if (template === "brutal" || template === "magazine") {
+                    const spans = ["md:col-span-5", "md:col-span-4", "md:col-span-3"];
+                    const colSpan = spans[index] || "md:col-span-4";
+
+                    return (
+                      <div key={relatedArticle.id} className={`${colSpan} relative`}>
+                        {relatedArticle.reason && template === "brutal" && (
+                          <div
+                            className="absolute -top-3 left-4 z-10 px-3 py-1 text-xs font-bold uppercase border-[3px] border-black bg-white"
+                            style={{ boxShadow: `2px 2px 0px 0px ${primaryColor}` }}
+                          >
+                            {relatedArticle.reason}
+                          </div>
+                        )}
+                        <ArticleCard
+                          article={relatedArticle}
+                          primaryColor={primaryColor}
+                          secondaryColor={secondaryColor}
+                        />
+                      </div>
+                    );
+                  }
 
                   return (
-                    <div key={relatedArticle.id} className={`${colSpan} relative`}>
-                      {/* Badge de relation */}
-                      {relatedArticle.reason && (
-                        <div
-                          className="absolute -top-3 left-4 z-10 px-3 py-1 text-xs font-bold uppercase border-[3px] border-black bg-white"
-                          style={{ boxShadow: `2px 2px 0px 0px ${primaryColor}` }}
-                        >
-                          {relatedArticle.reason}
-                        </div>
-                      )}
-                      <ArticleCard
-                        article={relatedArticle}
-                        primaryColor={primaryColor}
-                        secondaryColor={secondaryColor}
-                      />
-                    </div>
+                    <ArticleCard
+                      key={relatedArticle.id}
+                      article={relatedArticle}
+                      primaryColor={primaryColor}
+                      secondaryColor={secondaryColor}
+                    />
                   );
                 })}
               </div>
@@ -223,10 +378,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               <div className="text-center mt-10">
                 <Link
                   href="/blog"
-                  className="inline-flex items-center gap-2 font-bold uppercase text-sm tracking-wider text-black hover:gap-4 transition-all"
+                  className={`inline-flex items-center gap-2 text-sm ${
+                    template === "brutal"
+                      ? "font-bold uppercase tracking-wider text-black hover:gap-4"
+                      : template === "fresh"
+                      ? "font-bold text-gray-400 hover:text-white"
+                      : "text-gray-600 hover:text-gray-900"
+                  } transition-all`}
                 >
                   <span>Voir tous les articles</span>
-                  <span className="text-lg">&rarr;</span>
+                  <span>→</span>
                 </Link>
               </div>
             </div>
