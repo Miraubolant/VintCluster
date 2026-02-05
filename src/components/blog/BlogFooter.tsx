@@ -203,7 +203,7 @@ export function BlogFooter({ siteName, primaryColor, secondaryColor }: BlogFoote
         {/* Bottom section */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           {/* Site name */}
-          <span className={styles.logo} style={styles.logoStyle(secondary)}>
+          <span className={styles.logo} style={styles.logoStyle(primaryColor, secondary)}>
             {siteName}
           </span>
 
