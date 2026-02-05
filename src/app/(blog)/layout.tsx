@@ -51,13 +51,13 @@ export default async function BlogLayout({
         return {
           className: "min-h-screen flex flex-col bg-white",
           pattern: {
-            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99,102,241,0.08) 1px, transparent 0)`,
-            backgroundSize: "24px 24px",
+            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99,102,241,0.06) 1px, transparent 0)`,
+            backgroundSize: "28px 28px",
           },
         };
       case "fresh":
         return {
-          className: "min-h-screen flex flex-col bg-gradient-to-br from-orange-50 via-white to-pink-50",
+          className: "min-h-screen flex flex-col bg-black",
           pattern: null,
         };
       case "brutal":
