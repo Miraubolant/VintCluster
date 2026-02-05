@@ -95,18 +95,7 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
   };
 
   return (
-    <>
-      {/* CSS Animation for Fresh template gradient */}
-      {template === "fresh" && (
-        <style jsx global>{`
-          @keyframes gradient-shift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-          }
-        `}</style>
-      )}
-
-      <header className={`${styles.container} ${template === "minimal" || template === "tech" ? "sticky top-0 z-40" : ""}`}>
+    <header className={`${styles.container} ${template === "minimal" || template === "tech" ? "sticky top-0 z-40" : ""}`}>
         {/* Top accent bar */}
         <div style={styles.topBar(primaryColor, secondary)} />
 
@@ -284,7 +273,18 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
 
         {/* Bottom accent line */}
         {styles.bottomBar && <div className={styles.bottomBar} />}
+
+        {/* CSS Animation for Fresh template gradient - inline style tag */}
+        {template === "fresh" && (
+          <style dangerouslySetInnerHTML={{
+            __html: `
+              @keyframes gradient-shift {
+                0%, 100% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+              }
+            `
+          }} />
+        )}
       </header>
-    </>
   );
 }
