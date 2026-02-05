@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Clock } from "lucide-react";
-import { useTemplate, CARD_STYLES } from "./TemplateContext";
+import { useTemplate, CARD_STYLES, isLightColor, colorWithOpacity } from "./TemplateContext";
 
 // Type minimal pour ArticleCard (n'a pas besoin de site car colors viennent en props)
 interface ArticleForCard {
@@ -53,11 +53,12 @@ export function ArticleCard({
     }
   );
 
-  // Featured variant - large hero card (uses brutal style always for impact)
+  // Featured variant - large hero card
   if (featured) {
+    const isFresh = template === "fresh";
     return (
       <Link href={`/blog/${article.slug}`} className="group block">
-        <article className={`relative overflow-hidden ${template === "brutal" ? "bg-white border-[6px] border-black" : template === "minimal" ? "bg-white" : template === "magazine" ? "bg-white border border-gray-200" : template === "tech" ? "bg-white border border-gray-200 rounded-2xl shadow-md" : "bg-white rounded-3xl shadow-xl"}`}>
+        <article className={`relative overflow-hidden ${template === "brutal" ? "bg-white border-[6px] border-black" : template === "minimal" ? "bg-white" : template === "magazine" ? "bg-white border border-gray-200" : template === "tech" ? "bg-white border border-gray-200 rounded-2xl shadow-md" : "bg-gray-900 rounded-3xl"}`} style={isFresh ? { boxShadow: `0 20px 60px ${primaryColor}30` } : {}}>
           {/* Geometric corner decoration (brutal only) */}
           {template === "brutal" && (
             <>
@@ -113,25 +114,25 @@ export function ArticleCard({
               {/* Date badge + reading time */}
               <div className="inline-flex items-center gap-2 mb-6 flex-wrap">
                 <div
-                  className={`px-4 py-2 font-bold text-sm uppercase tracking-wider ${template === "brutal" ? "border-[4px] border-black font-black" : template === "minimal" ? "text-gray-400 font-medium" : template === "magazine" ? "bg-gray-100 text-gray-700" : template === "tech" ? "bg-indigo-100 text-indigo-600 rounded-lg font-mono" : "bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-full"}`}
-                  style={template === "brutal" ? { backgroundColor: primaryColor } : {}}
+                  className={`px-4 py-2 font-bold text-sm uppercase tracking-wider ${template === "brutal" ? "border-[4px] border-black font-black" : template === "minimal" ? "text-gray-400 font-medium" : template === "magazine" ? "bg-gray-100 text-gray-700" : template === "tech" ? "bg-indigo-100 text-indigo-600 rounded-lg font-mono" : "rounded-full"}`}
+                  style={template === "brutal" ? { backgroundColor: primaryColor } : template === "fresh" ? { background: `linear-gradient(135deg, ${primaryColor}, ${secondary})`, color: isLightColor(primaryColor) ? "#000" : "#FFF" } : {}}
                 >
                   {formattedDate}
                 </div>
-                <div className={`px-3 py-2 flex items-center gap-1.5 text-sm font-bold ${template === "brutal" ? "border-[3px] border-black bg-white" : template === "tech" ? "text-gray-500" : "text-gray-500"}`}>
+                <div className={`px-3 py-2 flex items-center gap-1.5 text-sm font-bold ${template === "brutal" ? "border-[3px] border-black bg-white" : template === "fresh" ? "text-gray-400" : "text-gray-500"}`}>
                   <Clock className="w-3.5 h-3.5" />
                   {readingTime} min
                 </div>
               </div>
 
               {/* Title */}
-              <h2 className={`leading-[1.1] mb-4 ${template === "brutal" ? "text-3xl md:text-4xl font-black text-black uppercase group-hover:underline decoration-[6px] underline-offset-8" : template === "minimal" ? "text-2xl md:text-3xl font-light text-gray-900" : template === "magazine" ? "text-2xl md:text-3xl font-serif font-bold text-gray-900" : template === "tech" ? "text-2xl md:text-3xl font-mono font-bold text-gray-900" : "text-2xl md:text-3xl font-bold text-gray-900"}`} style={template === "brutal" ? { textDecorationColor: primaryColor } : {}}>
+              <h2 className={`leading-[1.1] mb-4 ${template === "brutal" ? "text-3xl md:text-4xl font-black text-black uppercase group-hover:underline decoration-[6px] underline-offset-8" : template === "minimal" ? "text-2xl md:text-3xl font-light text-gray-900" : template === "magazine" ? "text-2xl md:text-3xl font-serif font-bold text-gray-900" : template === "tech" ? "text-2xl md:text-3xl font-semibold text-gray-900" : "text-2xl md:text-3xl font-bold text-white"}`} style={template === "brutal" ? { textDecorationColor: primaryColor } : {}}>
                 {article.title}
               </h2>
 
               {/* Summary */}
               {article.summary && (
-                <p className={`text-lg leading-relaxed mb-6 line-clamp-3 ${template === "tech" ? "text-gray-600" : "text-gray-700"}`}>
+                <p className={`text-lg leading-relaxed mb-6 line-clamp-3 ${template === "fresh" ? "text-gray-400" : template === "tech" ? "text-gray-600" : "text-gray-700"}`}>
                   {article.summary}
                 </p>
               )}
@@ -139,7 +140,8 @@ export function ArticleCard({
               {/* CTA */}
               <div className="inline-flex items-center gap-3">
                 <span
-                  className={`relative px-6 py-3 font-bold uppercase text-sm tracking-wider transition-all ${template === "brutal" ? "bg-black text-white border-[4px] border-black font-black group-hover:bg-white group-hover:text-black" : template === "minimal" ? "text-gray-600 hover:text-gray-900" : template === "magazine" ? "bg-gray-900 text-white" : template === "tech" ? "bg-indigo-600 text-white rounded-lg" : "bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-full"}`}
+                  className={`relative px-6 py-3 font-bold uppercase text-sm tracking-wider transition-all ${template === "brutal" ? "bg-black text-white border-[4px] border-black font-black group-hover:bg-white group-hover:text-black" : template === "minimal" ? "text-gray-600 hover:text-gray-900" : template === "magazine" ? "bg-gray-900 text-white" : template === "tech" ? "rounded-lg" : "rounded-full group-hover:scale-105"}`}
+                  style={template === "tech" ? { backgroundColor: primaryColor, color: isLightColor(primaryColor) ? "#000" : "#FFF" } : template === "fresh" ? { background: `linear-gradient(135deg, ${primaryColor}, ${secondary})`, color: isLightColor(primaryColor) ? "#000" : "#FFF", boxShadow: `0 8px 30px ${colorWithOpacity(primaryColor, 0.4)}` } : {}}
                 >
                   Lire l&apos;article
                 </span>
@@ -169,9 +171,13 @@ export function ArticleCard({
 
   // Horizontal compact variant
   if (variant === "horizontal") {
+    const isFresh = template === "fresh";
     return (
       <Link href={`/blog/${article.slug}`} className="group block">
-        <article className={`flex overflow-hidden ${template === "brutal" ? "bg-white border-[4px] border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all duration-200" : template === "minimal" ? "bg-white" : template === "tech" ? "bg-white rounded-xl border border-gray-200 hover:border-indigo-400 transition-all" : "bg-white rounded-2xl shadow-md hover:shadow-lg transition-all"}`}>
+        <article
+          className={`flex overflow-hidden ${template === "brutal" ? "bg-white border-[4px] border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all duration-200" : template === "minimal" ? "bg-white" : template === "tech" ? "bg-white rounded-xl border border-gray-200 hover:border-gray-400 transition-all" : template === "fresh" ? "bg-gray-900 rounded-2xl hover:scale-[1.02] transition-all" : "bg-white rounded-2xl shadow-md hover:shadow-lg transition-all"}`}
+          style={isFresh ? { boxShadow: `0 10px 30px ${colorWithOpacity(primaryColor, 0.2)}` } : {}}
+        >
           {article.image_url && (
             <div className={`relative w-1/3 min-w-[120px] overflow-hidden ${template === "brutal" ? "border-r-[4px] border-black" : ""}`}>
               <Image
@@ -184,12 +190,12 @@ export function ArticleCard({
           )}
           <div className="flex-1 p-4">
             <div
-              className={`inline-block px-2 py-1 text-[10px] font-bold uppercase mb-2 ${template === "brutal" ? "border-2 border-black" : template === "tech" ? "bg-indigo-100 text-indigo-600 rounded" : "text-gray-400"}`}
-              style={template === "brutal" ? { backgroundColor: primaryColor } : {}}
+              className={`inline-block px-2 py-1 text-[10px] font-bold uppercase mb-2 ${template === "brutal" ? "border-2 border-black" : template === "tech" ? "rounded" : template === "fresh" ? "rounded-full" : "text-gray-400"}`}
+              style={template === "brutal" ? { backgroundColor: primaryColor } : template === "fresh" ? { background: `linear-gradient(135deg, ${primaryColor}, ${secondary})`, color: isLightColor(primaryColor) ? "#000" : "#FFF" } : template === "tech" ? { backgroundColor: colorWithOpacity(primaryColor, 0.15), color: primaryColor } : {}}
             >
               {formattedDate}
             </div>
-            <h3 className={`leading-tight ${template === "brutal" ? "font-black text-sm uppercase text-black group-hover:underline decoration-2" : template === "minimal" ? "font-light text-sm text-gray-900" : template === "tech" ? "font-mono text-sm text-gray-900" : "font-bold text-sm text-gray-900"}`}>
+            <h3 className={`leading-tight ${template === "brutal" ? "font-black text-sm uppercase text-black group-hover:underline decoration-2" : template === "minimal" ? "font-light text-sm text-gray-900" : template === "tech" ? "font-semibold text-sm text-gray-900" : template === "fresh" ? "font-bold text-sm text-white" : "font-bold text-sm text-gray-900"}`}>
               {article.title}
             </h3>
           </div>
@@ -201,7 +207,13 @@ export function ArticleCard({
   // Default card variant - uses template styles
   return (
     <Link href={`/blog/${article.slug}`} className="group block h-full">
-      <article className={`relative h-full flex flex-col overflow-hidden ${styles.container}`} style={template === "brutal" ? { "--tw-shadow-color": primaryColor } as React.CSSProperties : {}}>
+      <article
+        className={`relative h-full flex flex-col overflow-hidden ${styles.container}`}
+        style={{
+          ...styles.containerStyle(primaryColor, secondary),
+          ...(template === "brutal" ? { "--tw-shadow-color": primaryColor } as React.CSSProperties : {})
+        }}
+      >
         {/* Corner decoration (brutal only) */}
         {template === "brutal" && (
           <div
@@ -221,8 +233,8 @@ export function ArticleCard({
               fill
               className={styles.imageStyle}
             />
-            {/* Gradient overlay on hover (brutal only) */}
-            {template === "brutal" && (
+            {/* Gradient overlay on hover */}
+            {(template === "brutal" || template === "fresh") && (
               <div
                 className="absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity duration-300"
                 style={{ backgroundColor: primaryColor }}
@@ -243,7 +255,7 @@ export function ArticleCard({
             )}
             <span
               className={styles.category}
-              style={template === "brutal" ? { backgroundColor: primaryColor } : {}}
+              style={styles.categoryStyle(primaryColor, secondary)}
             >
               {formattedDate}
             </span>
@@ -254,7 +266,7 @@ export function ArticleCard({
           </div>
 
           {/* Title */}
-          <h2 className={`${styles.title} flex-grow`} style={template === "brutal" ? { textDecorationColor: primaryColor } : {}}>
+          <h2 className={`${styles.title} flex-grow`} style={styles.titleStyle(primaryColor, secondary)}>
             {article.title}
           </h2>
 
@@ -266,15 +278,20 @@ export function ArticleCard({
           )}
 
           {/* CTA */}
-          <div className={`flex items-center justify-between mt-auto pt-4 ${template === "brutal" ? "border-t-[3px] border-dashed border-gray-300" : template === "minimal" ? "border-t border-gray-100" : ""}`}>
-            <span className={styles.readMore}>
+          <div className={`flex items-center justify-between mt-auto pt-4 ${template === "brutal" ? "border-t-[3px] border-dashed border-gray-300" : template === "minimal" ? "border-t border-gray-100" : template === "fresh" ? "border-t border-gray-800" : ""}`}>
+            <span className={styles.readMore} style={styles.readMoreStyle(primaryColor, secondary)}>
               Lire
             </span>
             <div className="flex items-center gap-1">
               {template === "brutal" && (
                 <div className="w-6 h-[3px] bg-black group-hover:w-10 transition-all" />
               )}
-              <span className={`font-bold group-hover:translate-x-1 transition-transform ${template === "tech" ? "text-indigo-600" : ""}`}>&rarr;</span>
+              <span
+                className={`font-bold group-hover:translate-x-1 transition-transform ${template === "fresh" ? "text-white" : ""}`}
+                style={template === "tech" || template === "magazine" ? { color: primaryColor } : {}}
+              >
+                &rarr;
+              </span>
             </div>
           </div>
         </div>

@@ -57,7 +57,7 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
 
       <div
         className={styles.wrapper(scrolled, primaryColor)}
-        style={styles.wrapperStyle(primaryColor)}
+        style={styles.wrapperStyle(primaryColor, secondary)}
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between gap-4">
@@ -77,7 +77,7 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
                 // Geometric initials badge
                 <div
                   className={styles.logoContainer}
-                  style={{ backgroundColor: secondary }}
+                  style={styles.logoContainerStyle(primaryColor, secondary)}
                 >
                   <span
                     className={`font-bold ${template === "brutal" ? "font-black text-lg tracking-tight" : template === "tech" ? "font-mono text-sm" : "text-sm"}`}
@@ -115,7 +115,7 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
               <Link
                 href="/blog"
                 className={styles.navButton}
-                style={styles.navButtonStyle(secondary)}
+                style={styles.navButtonStyle(primaryColor, secondary)}
               >
                 Blog
               </Link>
@@ -130,12 +130,12 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
               {mobileMenuOpen ? (
                 <X
                   className="w-6 h-6"
-                  style={{ color: isLight ? "#000" : "#FFF" }}
+                  style={{ color: template === "fresh" ? "#FFF" : isLight ? "#000" : "#FFF" }}
                 />
               ) : (
                 <Menu
                   className="w-6 h-6"
-                  style={{ color: isLight ? "#000" : "#FFF" }}
+                  style={{ color: template === "fresh" ? "#FFF" : isLight ? "#000" : "#FFF" }}
                 />
               )}
             </button>
@@ -157,45 +157,20 @@ export function BlogHeader({ siteName, primaryColor, secondaryColor, logoUrl }: 
 
           {/* Menu Panel */}
           <nav
-            className={`relative mx-4 mt-2 p-6 ${
-              template === "brutal"
-                ? "bg-white border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
-                : template === "minimal"
-                ? "bg-white rounded-lg shadow-lg"
-                : template === "magazine"
-                ? "bg-white border-2 border-gray-900"
-                : template === "tech"
-                ? "bg-white rounded-xl shadow-xl border border-gray-200"
-                : "bg-white rounded-2xl shadow-xl"
-            }`}
+            className={`relative mx-4 mt-2 p-6 ${styles.mobileMenuClass}`}
+            style={styles.mobileMenuStyle(primaryColor, secondary)}
           >
             <Link
               href="/"
               onClick={() => setMobileMenuOpen(false)}
-              className={`block py-3 text-lg font-bold ${
-                template === "brutal"
-                  ? "uppercase border-b-[3px] border-black"
-                  : template === "minimal"
-                  ? "text-gray-900 border-b border-gray-100"
-                  : template === "tech"
-                  ? "font-mono text-gray-900 border-b border-gray-200"
-                  : "text-gray-900 border-b border-gray-200"
-              }`}
+              className={`block py-3 text-lg ${styles.mobileLinkClass}`}
             >
               Accueil
             </Link>
             <Link
               href="/blog"
               onClick={() => setMobileMenuOpen(false)}
-              className={`block py-3 text-lg font-bold ${
-                template === "brutal"
-                  ? "uppercase"
-                  : template === "minimal"
-                  ? "text-gray-900"
-                  : template === "tech"
-                  ? "font-mono text-gray-900"
-                  : "text-gray-900"
-              }`}
+              className={`block py-3 text-lg ${styles.mobileLinkClass} border-b-0`}
             >
               Blog
             </Link>

@@ -71,198 +71,204 @@ Ton: Incitatif, urgent, FOMO`,
 };
 
 // ============================================================================
-// TEMPLATE: MINIMAL (ultra clean)
-// Style élégant - vouvoiement, pas d'emojis, paragraphes longs
+// TEMPLATE: MINIMAL (Apple / Swiss Design)
+// Style épuré à la Apple - vouvoiement, espaces, hiérarchie claire
+// Typographie fine, beaucoup de respiration, minimalisme fonctionnel
 // ============================================================================
 
 const MINIMAL_STYLE: ContentStyleConfig = {
-  toneInstructions: `## TON & STYLE MINIMAL
+  toneInstructions: `## TON & STYLE MINIMAL (Apple/Swiss Design)
 - Vouvoiement OBLIGATOIRE ("vous", "votre", "vos")
-- Ton posé, professionnel et raffiné
-- Phrases longues et élaborées (15-25 mots)
-- Vocabulaire soutenu et précis
-- Transitions fluides entre les paragraphes`,
+- Ton calme, confiant, épuré comme la communication Apple
+- Phrases courtes mais percutantes (10-15 mots)
+- Vocabulaire précis et choisi, jamais verbeux
+- Chaque mot doit compter - éliminer le superflu
+- Style élégant qui inspire confiance`,
 
   structureInstructions: `## STRUCTURE MINIMAL
-- Sections H2 descriptives et complètes (6-10 mots)
-- Peu de listes à puces (préférer les paragraphes)
-- Paragraphes développés (4-6 phrases)
-- Sous-sections H3 pour structurer la pensée
-- Pas de mise en forme excessive`,
+- Sections H2 concises et impactantes (3-6 mots max)
+- Un concept par paragraphe, très aéré
+- Listes à puces espacées quand nécessaire
+- Beaucoup d'espace blanc visuel (paragraphes courts)
+- Hiérarchie claire: une idée principale par section`,
 
   ctaFormat: `## FORMAT CTA MINIMAL
-Style: Subtil et élégant, intégré au texte
-Format: Découvrez [NomProduit](https://url.com)
-Exemple: Pour approfondir cette approche, découvrez les possibilités offertes par [VintDress](https://vintdress.com).
-Ton: Suggestif, informatif, non intrusif`,
+Style: Discret et élégant, phrase simple
+Format: [NomProduit](https://url.com)
+Exemple: Simplifiez vos photos avec [VintDress](https://vintdress.com).
+Ton: Confiant, direct, sans pression - l'utilisateur décide`,
 
   introStyle: `## INTRO MINIMAL
-- Mise en contexte en 2-3 phrases
-- Définition claire du sujet
-- Présentation de l'approche de l'article`,
+- Phrase d'accroche simple et directe
+- Problème posé en une phrase
+- Promesse claire de la solution`,
 
   conclusionStyle: `## CONCLUSION MINIMAL
-- Synthèse en prose (1 paragraphe)
-- Ouverture sur des perspectives
-- Invitation subtile à l'action`,
+- Récapitulatif en 2-3 phrases maximum
+- Une action suggérée, pas plus
+- Finir sur une note positive et sobre`,
 
   emojiUsage: `## EMOJIS MINIMAL
-- Aucun emoji dans l'article
-- Style épuré et professionnel
-- Utiliser des mots plutôt que des symboles`,
+- Aucun emoji - jamais
+- Élégance par la typographie pure
+- Laisser le texte respirer`,
 
   sentenceStyle: `## PHRASES MINIMAL
-- Phrases complexes avec subordonnées
-- Connecteurs logiques: "En effet", "Par conséquent", "Ainsi"
-- Pas de questions rhétoriques
-- Style soutenu et académique`,
+- Phrases simples et directes
+- Pas de fioritures ni d'adjectifs inutiles
+- Structure sujet-verbe-complément privilégiée
+- Ponctuation minimaliste`,
 };
 
 // ============================================================================
-// TEMPLATE: MAGAZINE (éditorial)
-// Style journalistique - vouvoiement, citations, encadrés
+// TEMPLATE: MAGAZINE (The Verge / Modern Editorial)
+// Style éditorial moderne - bold, coloré, accrocheur
+// Titres forts, mise en page dynamique, ton engagé
 // ============================================================================
 
 const MAGAZINE_STYLE: ContentStyleConfig = {
-  toneInstructions: `## TON & STYLE MAGAZINE
+  toneInstructions: `## TON & STYLE MAGAZINE (The Verge)
 - Vouvoiement OBLIGATOIRE ("vous", "votre")
-- Ton journalistique et informatif
-- Équilibre entre expertise et accessibilité
-- Citations et témoignages fictifs mais crédibles
-- Vocabulaire varié et imagé`,
+- Ton affirmé, engagé, avec du caractère
+- Phrases variées avec du rythme
+- Prendre position, avoir des opinions
+- Style éditorial moderne, pas corporate
+- Donner envie de partager`,
 
   structureInstructions: `## STRUCTURE MAGAZINE
-- Sections H2 accrocheurs style presse (5-8 mots)
-- Chapô (résumé) après chaque H2
-- Encadrés pour les points clés: > Citation ou point important
-- Mélange listes et paragraphes
-- Intertitres H3 nombreux pour aérer`,
+- Sections H2 punchy et accrocheurs (4-7 mots)
+- Paragraphes de longueur variée pour le rythme
+- Points clés en **gras** pour scanner rapidement
+- Encadrés colorés: > Point important à retenir
+- Sous-sections H3 pour structurer les arguments`,
 
   ctaFormat: `## FORMAT CTA MAGAZINE
-Style: Encadré éditorial
+Style: Encadré éditorial avec recommandation
 Format:
-> 💡 **Notre recommandation** : [NomProduit](https://url.com) permet de...
+> **Notre verdict** : [NomProduit](https://url.com) change la donne.
 Exemple:
-> 💡 **Notre recommandation** : Pour automatiser vos photos, [VintDress](https://vintdress.com) s'impose comme la solution de référence.
-Ton: Expert, recommandation éditoriale`,
+> **Notre verdict** : [VintDress](https://vintdress.com) est exactement ce dont les vendeurs Vinted avaient besoin.
+Ton: Éditorial, opinion assumée`,
 
   introStyle: `## INTRO MAGAZINE
-- Accroche narrative ou anecdote
-- Chiffre clé ou statistique marquante
-- Angle journalistique clair`,
+- Accroche forte qui capte l'attention
+- Contexte rapide du problème
+- Teaser de ce que l'article va démontrer`,
 
   conclusionStyle: `## CONCLUSION MAGAZINE
-- "En résumé" ou "Ce qu'il faut retenir"
-- 3-5 points clés numérotés
-- Perspective ou tendance future`,
+- "Le verdict" ou "Notre avis"
+- Points forts en liste
+- Invitation claire à l'action`,
 
   emojiUsage: `## EMOJIS MAGAZINE
-- Emojis limités aux encadrés seulement
-- 💡 pour les conseils, 📊 pour les chiffres
-- Jamais dans le corps du texte`,
+- 1-2 emojis maximum, dans les encadrés
+- 📊 pour données, 🔑 pour points clés
+- Jamais dans les titres ou le corps principal`,
 
   sentenceStyle: `## PHRASES MAGAZINE
-- Alternance phrases courtes et longues
-- Style narratif avec des exemples concrets
-- Citations: "Selon nos observations..."
-- Chiffres et pourcentages fréquents`,
+- Rythme varié: courtes + longues
+- Affirmations confiantes
+- Questions pour engager le lecteur
+- Chiffres concrets et comparaisons`,
 };
 
 // ============================================================================
-// TEMPLATE: TECH (moderne)
-// Style expert - tutoiement, termes techniques, data-driven
+// TEMPLATE: TECH (Stripe / Notion Style)
+// Style documentation pro - clair, bien structuré, rassurant
+// Comme lire la doc Stripe ou un article Notion
 // ============================================================================
 
 const TECH_STYLE: ContentStyleConfig = {
-  toneInstructions: `## TON & STYLE TECH
-- Tutoiement OBLIGATOIRE mais respectueux
-- Ton expert et technique
-- Vocabulaire précis: algorithme, conversion, ROI, optimisation
-- Références aux métriques et KPIs
-- Approche data-driven`,
+  toneInstructions: `## TON & STYLE TECH (Stripe/Notion)
+- Tutoiement OBLIGATOIRE mais professionnel
+- Ton clair, didactique, bienveillant
+- Comme un collègue senior qui explique bien
+- Vocabulaire précis sans être intimidant
+- Rassurer tout en étant expert`,
 
   structureInstructions: `## STRUCTURE TECH
-- Sections H2 techniques et descriptifs
-- Listes numérotées pour les processus
-- Tableaux Markdown pour les comparaisons
-- Code blocks pour les exemples techniques
-- Sous-sections H3 méthodiques`,
+- Sections H2 claires et descriptives (4-8 mots)
+- Étapes numérotées pour les processus: 1. 2. 3.
+- Listes à puces pour les options/avantages
+- Sous-sections H3 pour détailler
+- **Gras** pour les concepts importants`,
 
   ctaFormat: `## FORMAT CTA TECH
-Style: Technique avec bénéfice mesurable
-Format: [NomProduit](https://url.com) - résultat chiffré
-Exemple: Avec [VintDress](https://vintdress.com), les vendeurs constatent en moyenne +47% de clics sur leurs annonces.
-Ton: Factuel, basé sur les données`,
+Style: Intégré naturellement avec bénéfice clair
+Format: Essaie [NomProduit](https://url.com) pour [bénéfice].
+Exemple: Essaie [VintDress](https://vintdress.com) pour générer tes photos en 30 secondes.
+Ton: Utile, sans pression, orienté solution`,
 
   introStyle: `## INTRO TECH
-- Problème technique clairement posé
-- Métriques de contexte
-- Solution et résultats attendus`,
+- Contexte du problème en 1-2 phrases
+- Ce que tu vas apprendre
+- Pourquoi c'est important`,
 
   conclusionStyle: `## CONCLUSION TECH
-- Récapitulatif des points techniques
-- Métriques clés à retenir
-- Prochaines étapes concrètes`,
+- Résumé des points clés en liste
+- Prochaine étape recommandée
+- Ressource ou outil pour aller plus loin`,
 
   emojiUsage: `## EMOJIS TECH
-- Aucun emoji dans le texte
-- Utiliser des icônes textuelles si besoin: [→] [✓] [!]
-- Priorité à la clarté technique`,
+- Aucun emoji
+- Clarté et professionnalisme
+- Iconographie textuelle si utile: → • ✓`,
 
   sentenceStyle: `## PHRASES TECH
-- Phrases structurées et précises
-- Terminologie technique consistante
-- Exemples avec chiffres concrets
-- Pas de langage émotionnel`,
+- Phrases claires et directes
+- Un concept à la fois
+- Exemples concrets fréquents
+- Éviter le jargon inutile`,
 };
 
 // ============================================================================
-// TEMPLATE: FRESH (coloré/jeune)
-// Style décontracté - tutoiement fort, emojis, questions
+// TEMPLATE: FRESH (TikTok / Instagram Gen-Z)
+// Style réseaux sociaux dark mode - néon, énergique, viral
+// Comme un créateur de contenu qui parle à sa communauté
 // ============================================================================
 
 const FRESH_STYLE: ContentStyleConfig = {
-  toneInstructions: `## TON & STYLE FRESH
-- Tutoiement TRÈS familier ("t'as vu", "genre", "trop bien")
-- Ton enthousiaste et positif
-- Langage jeune et actuel
-- Expressions tendance: "game changer", "next level", "c'est le feu"
-- Interpellation directe du lecteur`,
+  toneInstructions: `## TON & STYLE FRESH (TikTok/Instagram)
+- Tutoiement OBLIGATOIRE, très direct
+- Ton énergique comme un créateur de contenu
+- Langage actuel: "no cap", "c'est validé", "trust"
+- Parler comme à un pote, pas comme un article
+- Créer de l'engagement, donner envie de partager`,
 
   structureInstructions: `## STRUCTURE FRESH
-- Sections H2 fun avec emojis et questions
-- Beaucoup de listes colorées
-- Paragraphes très courts (1-2 phrases)
-- Questions fréquentes pour engager
-- Mises en forme variées`,
+- Sections H2 courtes et percutantes (3-5 mots max)
+- Format "snackable" - paragraphes d'1-2 phrases
+- Listes avec emojis pour chaque item
+- Questions pour créer l'interaction
+- Style très visuel, facile à scanner`,
 
   ctaFormat: `## FORMAT CTA FRESH
-Style: Enthousiaste avec double emoji
-Format: ✨ [Texte fun](https://url.com) ✨
-Exemple: ✨ [Découvre VintDress maintenant](https://vintdress.com) ✨ - tu vas halluciner!
-Ton: Excité, FOMO positif`,
+Style: Appel à l'action fun et direct
+Format: ✨ [Action fun](https://url.com) ✨
+Exemple: ✨ [Teste VintDress](https://vintdress.com) ✨ et dis-moi ce que t'en penses!
+Ton: FOMO positif, communautaire`,
 
   introStyle: `## INTRO FRESH
-- Question directe au lecteur
-- Promesse de valeur fun
-- Teaser sur le contenu à venir`,
+- Accroche choc ou question
+- "T'as déjà essayé de..." ou "Imagine si..."
+- Promesse claire de ce qu'on va apprendre`,
 
   conclusionStyle: `## CONCLUSION FRESH
-- Récap' rapide en bullet points fun
-- Encouragement enthousiaste
-- CTA avec urgence positive`,
+- Récap ultra rapide
+- Appel à l'action communautaire
+- "Dis-moi en commentaire..." vibe`,
 
   emojiUsage: `## EMOJIS FRESH
-- 8-12 emojis dans l'article
-- Emojis variés et colorés: ✨ 🎉 💪 🙌 😍 🤩 💯 🔥
-- 1-2 emojis par section H2
-- Emojis dans les listes aussi`,
+- 6-10 emojis dans l'article
+- Emojis tendance: ✨ 🔥 💀 🙌 👀 💯 🚀 ✅
+- Un emoji par item de liste
+- Emojis dans les titres H2 aussi`,
 
   sentenceStyle: `## PHRASES FRESH
-- Phrases très courtes (max 12 mots)
-- Exclamations fréquentes!
-- Questions rhétoriques constantes
-- Interjections: "Wahou!", "Incroyable!", "Trop cool!"`,
+- Ultra courtes (max 10 mots)
+- Interpellations: "Attends", "Écoute", "Regarde"
+- Questions fréquentes
+- Exclamations!`,
 };
 
 // ============================================================================

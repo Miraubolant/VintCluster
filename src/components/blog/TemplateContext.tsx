@@ -38,10 +38,9 @@ export function useTemplate() {
 }
 
 // ============================================================================
-// STYLES PAR TEMPLATE
+// UTILITAIRES COULEURS
 // ============================================================================
 
-// Determine if color is light or dark to choose text color
 export function isLightColor(color: string): boolean {
   const hex = color.replace("#", "");
   const r = parseInt(hex.substr(0, 2), 16);
@@ -51,24 +50,65 @@ export function isLightColor(color: string): boolean {
   return brightness > 128;
 }
 
+export function lightenColor(color: string, amount: number): string {
+  const hex = color.replace("#", "");
+  const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + amount);
+  const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + amount);
+  const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + amount);
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+export function darkenColor(color: string, amount: number): string {
+  const hex = color.replace("#", "");
+  const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - amount);
+  const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - amount);
+  const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - amount);
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+export function colorWithOpacity(color: string, opacity: number): string {
+  const hex = color.replace("#", "");
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
 // ============================================================================
 // HEADER STYLES
 // ============================================================================
 
 export interface HeaderStyleConfig {
+  // Container global
   container: string;
+  // Barre d'accent en haut
   topBar: (primary: string, secondary: string) => React.CSSProperties;
+  // Wrapper principal
   wrapper: (scrolled: boolean, primary: string) => string;
-  wrapperStyle: (primary: string) => React.CSSProperties;
+  wrapperStyle: (primary: string, secondary: string) => React.CSSProperties;
+  // Container du logo
   logoContainer: string;
+  logoContainerStyle: (primary: string, secondary: string) => React.CSSProperties;
+  // Texte du logo
   logoText: (scrolled: boolean, isLight: boolean) => string;
+  logoTextStyle: (primary: string, secondary: string) => React.CSSProperties;
+  // Bouton navigation
   navButton: string;
-  navButtonStyle: (secondary: string) => React.CSSProperties;
+  navButtonStyle: (primary: string, secondary: string) => React.CSSProperties;
+  // Barre en bas
   bottomBar: string;
+  bottomBarStyle: (primary: string, secondary: string) => React.CSSProperties;
+  // Mobile menu
+  mobileMenuClass: string;
+  mobileMenuStyle: (primary: string, secondary: string) => React.CSSProperties;
+  mobileLinkClass: string;
 }
 
 export const HEADER_STYLES: Record<SiteTemplate, HeaderStyleConfig> = {
-  // BRUTAL - Néo-brutaliste (actuel)
+  // ============================================================================
+  // BRUTAL - Néo-brutaliste hardcore
+  // Bordures épaisses 4px+, ombres décalées, couleurs vives, uppercase
+  // ============================================================================
   brutal: {
     container: "relative",
     topBar: (primary, secondary) => ({
@@ -77,74 +117,153 @@ export const HEADER_STYLES: Record<SiteTemplate, HeaderStyleConfig> = {
     }),
     wrapper: (scrolled) => `relative border-b-[5px] border-black transition-all duration-300 ${scrolled ? "py-3" : "py-5"}`,
     wrapperStyle: (primary) => ({ backgroundColor: primary }),
-    logoContainer: "w-12 h-12 border-[4px] border-black flex items-center justify-center rotate-0 group-hover:rotate-6 transition-transform",
+    logoContainer: "w-12 h-12 border-[4px] border-black flex items-center justify-center group-hover:rotate-6 transition-transform",
+    logoContainerStyle: (_, secondary) => ({ backgroundColor: secondary }),
     logoText: (scrolled, isLight) => `font-black uppercase tracking-tight transition-all ${scrolled ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"} ${isLight ? "text-black" : "text-white"}`,
-    navButton: "relative px-5 py-2 font-black uppercase text-sm tracking-wider bg-black text-white border-[4px] border-black transition-all hover:shadow-[4px_4px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5",
-    navButtonStyle: (secondary) => ({ "--tw-shadow-color": secondary } as React.CSSProperties),
+    logoTextStyle: () => ({}),
+    navButton: "px-5 py-2 font-black uppercase text-sm tracking-wider border-[4px] border-black transition-all hover:shadow-[4px_4px_0px_0px] hover:-translate-x-0.5 hover:-translate-y-0.5",
+    navButtonStyle: (_, secondary) => ({
+      backgroundColor: secondary,
+      color: isLightColor(secondary) ? "#000" : "#FFF",
+    }),
     bottomBar: "h-[3px] bg-black",
+    bottomBarStyle: () => ({}),
+    mobileMenuClass: "bg-white border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]",
+    mobileMenuStyle: () => ({}),
+    mobileLinkClass: "uppercase font-black border-b-[3px] border-black",
   },
 
-  // MINIMAL - Ultra clean
+  // ============================================================================
+  // MINIMAL - Apple/Swiss Design
+  // Ultra épuré, typographie fine Helvetica-like, beaucoup de blanc
+  // Accents de couleur très subtils, tracking large
+  // ============================================================================
   minimal: {
     container: "relative",
     topBar: () => ({ height: "0px", display: "none" }),
-    wrapper: (scrolled) => `transition-all duration-300 ${scrolled ? "py-3" : "py-6"} border-b border-gray-100`,
-    wrapperStyle: () => ({ backgroundColor: "white" }),
+    wrapper: (scrolled) => `transition-all duration-500 ${scrolled ? "py-4" : "py-8"}`,
+    wrapperStyle: () => ({
+      backgroundColor: "#ffffff",
+      borderBottom: "1px solid #f3f4f6",
+    }),
     logoContainer: "w-10 h-10 rounded-full flex items-center justify-center",
-    logoText: (scrolled) => `font-light tracking-[0.2em] uppercase transition-all text-gray-900 ${scrolled ? "text-lg" : "text-xl"}`,
-    navButton: "px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors",
+    logoContainerStyle: (primary) => ({
+      backgroundColor: colorWithOpacity(primary, 0.08),
+    }),
+    logoText: (scrolled) => `font-light tracking-[0.35em] uppercase transition-all ${scrolled ? "text-sm" : "text-base"} text-gray-800`,
+    logoTextStyle: () => ({}),
+    navButton: "px-0 py-2 text-sm font-normal tracking-[0.1em] text-gray-500 hover:text-gray-900 transition-colors relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-current hover:after:w-full after:transition-all",
     navButtonStyle: () => ({}),
     bottomBar: "",
+    bottomBarStyle: () => ({}),
+    mobileMenuClass: "bg-white shadow-2xl rounded-none border-t border-gray-100",
+    mobileMenuStyle: () => ({}),
+    mobileLinkClass: "font-light tracking-[0.1em] text-gray-700 border-b border-gray-100",
   },
 
-  // MAGAZINE - Style éditorial
+  // ============================================================================
+  // MAGAZINE - The Verge/Modern Editorial
+  // Layout dynamique, couleurs vives utilisées fortement, typographie bold
+  // Grandes images, titres accrocheurs
+  // ============================================================================
   magazine: {
     container: "relative bg-white",
     topBar: (primary) => ({
-      height: "4px",
+      height: "5px",
       backgroundColor: primary,
     }),
-    wrapper: (scrolled) => `transition-all duration-300 ${scrolled ? "py-3" : "py-6"} border-b-2 border-gray-900`,
-    wrapperStyle: () => ({ backgroundColor: "white" }),
-    logoContainer: "w-12 h-12 border-2 border-gray-900 flex items-center justify-center",
-    logoText: (scrolled) => `font-serif font-bold tracking-tight text-gray-900 ${scrolled ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"}`,
-    navButton: "px-4 py-2 text-sm font-medium uppercase tracking-widest text-gray-700 border-b-2 border-transparent hover:border-gray-900 transition-all",
-    navButtonStyle: () => ({}),
+    wrapper: (scrolled) => `transition-all duration-300 ${scrolled ? "py-3" : "py-5"}`,
+    wrapperStyle: (primary) => ({
+      backgroundColor: "#ffffff",
+      borderBottom: `3px solid ${primary}`,
+    }),
+    logoContainer: "w-11 h-11 flex items-center justify-center",
+    logoContainerStyle: (primary) => ({
+      backgroundColor: primary,
+    }),
+    logoText: (scrolled) => `font-extrabold tracking-tight ${scrolled ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"} text-gray-900`,
+    logoTextStyle: () => ({}),
+    navButton: "px-4 py-2 text-sm font-bold uppercase tracking-wide transition-all",
+    navButtonStyle: (primary) => ({
+      backgroundColor: primary,
+      color: isLightColor(primary) ? "#000" : "#FFF",
+    }),
     bottomBar: "",
+    bottomBarStyle: () => ({}),
+    mobileMenuClass: "bg-white border-t-4",
+    mobileMenuStyle: (primary) => ({ borderColor: primary }),
+    mobileLinkClass: "font-bold text-gray-900 border-b-2 border-gray-100",
   },
 
-  // TECH - Moderne avec gradients (fond clair)
+  // ============================================================================
+  // TECH - Stripe/Notion Style
+  // Propre et professionnel, palette colorée du site, coins arrondis
+  // Ombres subtiles, police claire, transitions fluides
+  // ============================================================================
   tech: {
+    container: "relative",
+    topBar: (primary, secondary) => ({
+      height: "4px",
+      background: `linear-gradient(90deg, ${primary}, ${secondary})`,
+    }),
+    wrapper: (scrolled) => `transition-all duration-300 ${scrolled ? "py-3" : "py-5"} shadow-sm`,
+    wrapperStyle: () => ({
+      backgroundColor: "#ffffff",
+      borderBottom: "1px solid #e5e7eb",
+    }),
+    logoContainer: "w-10 h-10 rounded-xl flex items-center justify-center shadow-md",
+    logoContainerStyle: (primary, secondary) => ({
+      background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+    }),
+    logoText: (scrolled) => `font-semibold tracking-tight ${scrolled ? "text-lg md:text-xl" : "text-xl md:text-2xl"} text-gray-900`,
+    logoTextStyle: () => ({}),
+    navButton: "px-5 py-2.5 text-sm font-medium rounded-lg transition-all shadow-sm hover:shadow-md",
+    navButtonStyle: (primary) => ({
+      backgroundColor: primary,
+      color: isLightColor(primary) ? "#000" : "#FFF",
+    }),
+    bottomBar: "",
+    bottomBarStyle: () => ({}),
+    mobileMenuClass: "bg-white rounded-2xl shadow-2xl border border-gray-200",
+    mobileMenuStyle: () => ({}),
+    mobileLinkClass: "font-medium text-gray-700 border-b border-gray-100",
+  },
+
+  // ============================================================================
+  // FRESH - TikTok/Instagram Gen-Z Style
+  // FOND SOMBRE, néons, effets glass, gradients audacieux
+  // Très arrondi, ombres colorées, animations
+  // ============================================================================
+  fresh: {
     container: "relative",
     topBar: (primary, secondary) => ({
       height: "3px",
       background: `linear-gradient(90deg, ${primary}, ${secondary}, ${primary})`,
-    }),
-    wrapper: (scrolled) => `transition-all duration-300 ${scrolled ? "py-3" : "py-5"} border-b border-gray-200 shadow-sm`,
-    wrapperStyle: () => ({ backgroundColor: "white" }),
-    logoContainer: "w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center",
-    logoText: (scrolled) => `font-mono font-bold tracking-tight text-gray-900 ${scrolled ? "text-lg md:text-xl" : "text-xl md:text-2xl"}`,
-    navButton: "px-4 py-2 text-sm font-medium text-gray-600 hover:text-indigo-600 bg-gray-100 rounded-lg hover:bg-indigo-50 transition-all",
-    navButtonStyle: () => ({}),
-    bottomBar: "",
-  },
-
-  // FRESH - Coloré et dynamique
-  fresh: {
-    container: "relative",
-    topBar: (primary, secondary) => ({
-      height: "6px",
-      background: `linear-gradient(90deg, ${primary}, ${secondary}, ${primary})`,
       backgroundSize: "200% 100%",
       animation: "gradient 3s ease infinite",
     }),
-    wrapper: (scrolled) => `transition-all duration-300 ${scrolled ? "py-3" : "py-5"} rounded-b-3xl shadow-lg`,
-    wrapperStyle: (primary) => ({ backgroundColor: primary }),
-    logoContainer: "w-12 h-12 rounded-2xl flex items-center justify-center shadow-md transform hover:scale-110 transition-transform",
-    logoText: (scrolled, isLight) => `font-bold tracking-tight transition-all ${scrolled ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"} ${isLight ? "text-gray-900" : "text-white"}`,
-    navButton: "px-6 py-2.5 font-bold text-sm rounded-full shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all",
-    navButtonStyle: (secondary) => ({ backgroundColor: secondary, color: isLightColor(secondary) ? "#000" : "#FFF" }),
+    wrapper: (scrolled) => `transition-all duration-300 ${scrolled ? "py-3" : "py-5"}`,
+    wrapperStyle: () => ({
+      backgroundColor: "#0f0f0f",
+    }),
+    logoContainer: "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform",
+    logoContainerStyle: (primary, secondary) => ({
+      background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+      boxShadow: `0 8px 32px ${colorWithOpacity(primary, 0.4)}`,
+    }),
+    logoText: (scrolled) => `font-bold tracking-tight transition-all ${scrolled ? "text-xl md:text-2xl" : "text-2xl md:text-3xl"} text-white`,
+    logoTextStyle: () => ({}),
+    navButton: "px-6 py-2.5 text-sm font-bold rounded-full transition-all hover:scale-105",
+    navButtonStyle: (primary, secondary) => ({
+      background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+      color: isLightColor(primary) ? "#000" : "#FFF",
+      boxShadow: `0 4px 20px ${colorWithOpacity(primary, 0.5)}`,
+    }),
     bottomBar: "",
+    bottomBarStyle: () => ({}),
+    mobileMenuClass: "bg-gray-900/95 backdrop-blur-xl rounded-3xl border border-gray-800",
+    mobileMenuStyle: () => ({}),
+    mobileLinkClass: "font-bold text-white border-b border-gray-800",
   },
 };
 
@@ -154,80 +273,126 @@ export const HEADER_STYLES: Record<SiteTemplate, HeaderStyleConfig> = {
 
 export interface CardStyleConfig {
   container: string;
+  containerStyle: (primary: string, secondary: string) => React.CSSProperties;
   imageWrapper: string;
   imageStyle: string;
   contentWrapper: string;
   category: string;
+  categoryStyle: (primary: string, secondary: string) => React.CSSProperties;
   title: string;
+  titleStyle: (primary: string, secondary: string) => React.CSSProperties;
   excerpt: string;
   meta: string;
   readMore: string;
+  readMoreStyle: (primary: string, secondary: string) => React.CSSProperties;
 }
 
 export const CARD_STYLES: Record<SiteTemplate, CardStyleConfig> = {
-  // BRUTAL - Néo-brutaliste
+  // BRUTAL - Bordures épaisses, ombres décalées
   brutal: {
-    container: "group bg-white border-[4px] border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-1 hover:-translate-y-1 transition-all duration-200",
+    container: "group bg-white border-[4px] border-black shadow-[8px_8px_0px_0px] hover:shadow-[12px_12px_0px_0px] hover:-translate-x-1 hover:-translate-y-1 transition-all duration-200",
+    containerStyle: (primary) => ({ "--tw-shadow-color": primary } as React.CSSProperties),
     imageWrapper: "relative aspect-[16/10] border-b-[4px] border-black overflow-hidden",
     imageStyle: "object-cover group-hover:scale-105 transition-transform duration-300",
     contentWrapper: "p-5",
-    category: "inline-block px-3 py-1 text-xs font-black uppercase tracking-wider bg-black text-white mb-3",
+    category: "inline-block px-3 py-1 text-xs font-black uppercase tracking-wider mb-3",
+    categoryStyle: (primary) => ({
+      backgroundColor: primary,
+      color: isLightColor(primary) ? "#000" : "#FFF"
+    }),
     title: "font-black text-xl md:text-2xl uppercase leading-tight mb-3 group-hover:underline decoration-4",
+    titleStyle: (primary) => ({ textDecorationColor: primary }),
     excerpt: "text-gray-700 line-clamp-2 mb-4",
     meta: "flex items-center gap-4 text-xs font-bold uppercase text-gray-500",
-    readMore: "font-black uppercase text-sm tracking-wider hover:underline",
+    readMore: "font-black uppercase text-sm tracking-wider",
+    readMoreStyle: (primary) => ({ color: darkenColor(primary, 20) }),
   },
 
-  // MINIMAL - Ultra clean
+  // MINIMAL - Apple/Swiss clean
   minimal: {
-    container: "group bg-white",
-    imageWrapper: "relative aspect-[16/10] overflow-hidden mb-4",
-    imageStyle: "object-cover rounded-sm",
-    contentWrapper: "space-y-3",
-    category: "text-xs font-medium uppercase tracking-widest text-gray-400",
-    title: "font-light text-xl md:text-2xl text-gray-900 leading-snug group-hover:text-gray-600 transition-colors",
-    excerpt: "text-gray-500 text-sm line-clamp-2",
-    meta: "flex items-center gap-3 text-xs text-gray-400",
-    readMore: "text-sm text-gray-600 hover:text-gray-900 transition-colors",
+    container: "group bg-white transition-all duration-500",
+    containerStyle: () => ({}),
+    imageWrapper: "relative aspect-[16/10] overflow-hidden mb-6",
+    imageStyle: "object-cover transition-transform duration-700 group-hover:scale-102",
+    contentWrapper: "space-y-4",
+    category: "text-[11px] font-medium uppercase tracking-[0.2em]",
+    categoryStyle: (primary) => ({ color: primary }),
+    title: "font-light text-xl md:text-2xl leading-snug text-gray-800 group-hover:text-gray-600 transition-colors",
+    titleStyle: () => ({}),
+    excerpt: "text-gray-400 text-sm leading-relaxed line-clamp-2",
+    meta: "flex items-center gap-3 text-[11px] text-gray-400 tracking-wide",
+    readMore: "text-sm font-normal tracking-wide transition-colors",
+    readMoreStyle: (primary) => ({ color: primary }),
   },
 
-  // MAGAZINE - Style éditorial
+  // MAGAZINE - The Verge modern editorial
   magazine: {
-    container: "group bg-white border border-gray-200 hover:border-gray-400 transition-colors",
+    container: "group bg-white overflow-hidden hover:shadow-xl transition-all duration-300",
+    containerStyle: (primary) => ({
+      borderLeft: `4px solid ${primary}`,
+    }),
     imageWrapper: "relative aspect-[16/10] overflow-hidden",
-    imageStyle: "object-cover group-hover:scale-102 transition-transform duration-500",
-    contentWrapper: "p-6",
-    category: "inline-block px-2 py-0.5 text-xs font-semibold uppercase tracking-wider bg-gray-100 text-gray-700 mb-3",
-    title: "font-serif text-xl md:text-2xl font-bold text-gray-900 leading-tight mb-3 group-hover:text-gray-700 transition-colors",
-    excerpt: "text-gray-600 line-clamp-3 mb-4 leading-relaxed",
-    meta: "flex items-center gap-4 text-sm text-gray-500",
-    readMore: "font-semibold text-sm uppercase tracking-wider text-gray-900 hover:underline",
+    imageStyle: "object-cover group-hover:scale-105 transition-transform duration-500",
+    contentWrapper: "p-5",
+    category: "inline-block px-3 py-1.5 text-xs font-bold uppercase tracking-wide mb-3",
+    categoryStyle: (primary) => ({
+      backgroundColor: primary,
+      color: isLightColor(primary) ? "#000" : "#FFF",
+    }),
+    title: "font-extrabold text-xl md:text-2xl leading-tight mb-3 text-gray-900",
+    titleStyle: () => ({}),
+    excerpt: "text-gray-600 line-clamp-2 mb-4",
+    meta: "flex items-center gap-4 text-sm text-gray-500 font-medium",
+    readMore: "font-bold text-sm uppercase tracking-wide",
+    readMoreStyle: (primary) => ({ color: primary }),
   },
 
-  // TECH - Moderne avec gradients (fond clair)
+  // TECH - Stripe/Notion clean
   tech: {
-    container: "group bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-indigo-400 hover:shadow-lg transition-all",
+    container: "group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl hover:border-gray-300 transition-all duration-300",
+    containerStyle: () => ({}),
     imageWrapper: "relative aspect-[16/10] overflow-hidden",
     imageStyle: "object-cover group-hover:scale-105 transition-transform duration-300",
     contentWrapper: "p-5",
-    category: "inline-block px-2.5 py-1 text-xs font-mono font-medium bg-indigo-100 text-indigo-600 rounded-md mb-3",
-    title: "font-mono font-bold text-lg md:text-xl text-gray-900 leading-tight mb-3",
+    category: "inline-block px-3 py-1.5 text-xs font-medium rounded-lg mb-3",
+    categoryStyle: (primary, secondary) => ({
+      background: `linear-gradient(135deg, ${colorWithOpacity(primary, 0.15)}, ${colorWithOpacity(secondary, 0.15)})`,
+      color: darkenColor(primary, 40),
+    }),
+    title: "font-semibold text-lg md:text-xl leading-tight mb-3 text-gray-900",
+    titleStyle: () => ({}),
     excerpt: "text-gray-600 text-sm line-clamp-2 mb-4",
     meta: "flex items-center gap-4 text-xs text-gray-500",
-    readMore: "font-mono text-sm text-indigo-600 hover:text-indigo-500 transition-colors",
+    readMore: "text-sm font-medium transition-colors",
+    readMoreStyle: (primary) => ({ color: primary }),
   },
 
-  // FRESH - Coloré et dynamique
+  // FRESH - TikTok/Instagram dark mode
   fresh: {
-    container: "group bg-white rounded-3xl shadow-lg hover:shadow-xl overflow-hidden transform hover:-translate-y-1 transition-all duration-300",
+    container: "group bg-gray-900 rounded-3xl overflow-hidden hover:scale-[1.02] transition-all duration-300",
+    containerStyle: (primary) => ({
+      boxShadow: `0 20px 60px ${colorWithOpacity(primary, 0.2)}`,
+    }),
     imageWrapper: "relative aspect-[16/10] overflow-hidden",
     imageStyle: "object-cover group-hover:scale-110 transition-transform duration-500",
     contentWrapper: "p-6",
-    category: "inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full bg-gradient-to-r from-pink-500 to-orange-400 text-white mb-3",
-    title: "font-bold text-xl md:text-2xl text-gray-900 leading-tight mb-3",
-    excerpt: "text-gray-600 line-clamp-2 mb-4",
+    category: "inline-block px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-full mb-4",
+    categoryStyle: (primary, secondary) => ({
+      background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+      color: isLightColor(primary) ? "#000" : "#FFF",
+      boxShadow: `0 4px 15px ${colorWithOpacity(primary, 0.4)}`,
+    }),
+    title: "font-bold text-xl md:text-2xl leading-tight mb-3 text-white",
+    titleStyle: () => ({}),
+    excerpt: "text-gray-400 line-clamp-2 mb-4",
     meta: "flex items-center gap-3 text-sm text-gray-500",
-    readMore: "font-bold text-sm bg-gradient-to-r from-pink-500 to-orange-400 bg-clip-text text-transparent",
+    readMore: "font-bold text-sm",
+    readMoreStyle: (primary, secondary) => ({
+      background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      backgroundClip: "text",
+    } as React.CSSProperties),
   },
 };
 
@@ -240,10 +405,13 @@ export interface FooterStyleConfig {
   containerStyle: (primary: string, secondary: string) => React.CSSProperties;
   content: string;
   logo: string;
-  logoStyle: (secondary: string) => React.CSSProperties;
+  logoStyle: (primary: string, secondary: string) => React.CSSProperties;
   text: string;
+  textStyle: (primary: string, secondary: string) => React.CSSProperties;
   link: string;
+  linkStyle: (primary: string, secondary: string) => React.CSSProperties;
   copyright: string;
+  copyrightStyle: (primary: string, secondary: string) => React.CSSProperties;
 }
 
 export const FOOTER_STYLES: Record<SiteTemplate, FooterStyleConfig> = {
@@ -253,57 +421,193 @@ export const FOOTER_STYLES: Record<SiteTemplate, FooterStyleConfig> = {
     containerStyle: (primary) => ({ backgroundColor: primary }),
     content: "container mx-auto px-4 py-8",
     logo: "font-black text-2xl uppercase",
-    logoStyle: () => ({}),
+    logoStyle: (_, secondary) => ({ color: secondary }),
     text: "font-bold",
+    textStyle: (primary) => ({ color: isLightColor(primary) ? "#000" : "#FFF" }),
     link: "font-bold hover:underline decoration-2",
-    copyright: "text-sm font-bold mt-6 pt-6 border-t-[3px] border-black/20",
+    linkStyle: (_, secondary) => ({ color: secondary }),
+    copyright: "text-sm font-bold mt-6 pt-6 border-t-[3px]",
+    copyrightStyle: (_, secondary) => ({ borderColor: colorWithOpacity(secondary, 0.3) }),
   },
 
-  // MINIMAL
+  // MINIMAL - Apple/Swiss
   minimal: {
-    container: "border-t border-gray-100 bg-white",
+    container: "bg-white",
+    containerStyle: () => ({ borderTop: "1px solid #f3f4f6" }),
+    content: "container mx-auto px-4 py-16",
+    logo: "font-light text-lg tracking-[0.35em] uppercase text-gray-800",
+    logoStyle: () => ({}),
+    text: "text-sm text-gray-400",
+    textStyle: () => ({}),
+    link: "text-sm text-gray-500 hover:text-gray-900 transition-colors",
+    linkStyle: () => ({}),
+    copyright: "text-xs text-gray-400 mt-12 pt-8 border-t border-gray-100",
+    copyrightStyle: () => ({}),
+  },
+
+  // MAGAZINE - The Verge
+  magazine: {
+    container: "",
+    containerStyle: (primary) => ({
+      backgroundColor: primary,
+    }),
+    content: "container mx-auto px-4 py-10",
+    logo: "font-extrabold text-2xl",
+    logoStyle: (primary) => ({ color: isLightColor(primary) ? "#000" : "#FFF" }),
+    text: "",
+    textStyle: (primary) => ({ color: isLightColor(primary) ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.7)" }),
+    link: "transition-colors hover:underline",
+    linkStyle: (primary) => ({ color: isLightColor(primary) ? "#000" : "#FFF" }),
+    copyright: "text-sm mt-8 pt-8 border-t",
+    copyrightStyle: (primary) => ({
+      color: isLightColor(primary) ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)",
+      borderColor: isLightColor(primary) ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)",
+    }),
+  },
+
+  // TECH - Stripe/Notion
+  tech: {
+    container: "bg-gray-50",
+    containerStyle: () => ({ borderTop: "1px solid #e5e7eb" }),
+    content: "container mx-auto px-4 py-12",
+    logo: "font-semibold text-xl text-gray-900",
+    logoStyle: () => ({}),
+    text: "text-sm text-gray-600",
+    textStyle: () => ({}),
+    link: "text-sm text-gray-600 hover:text-gray-900 transition-colors",
+    linkStyle: () => ({}),
+    copyright: "text-xs text-gray-500 mt-10 pt-8 border-t border-gray-200",
+    copyrightStyle: () => ({}),
+  },
+
+  // FRESH - TikTok/Instagram dark
+  fresh: {
+    container: "bg-black",
     containerStyle: () => ({}),
     content: "container mx-auto px-4 py-12",
-    logo: "font-light text-xl tracking-[0.2em] uppercase text-gray-900",
-    logoStyle: () => ({}),
-    text: "text-gray-500 text-sm",
-    link: "text-gray-500 hover:text-gray-900 text-sm transition-colors",
-    copyright: "text-xs text-gray-400 mt-8 pt-8 border-t border-gray-100",
-  },
-
-  // MAGAZINE
-  magazine: {
-    container: "border-t-2 border-gray-900 bg-gray-50",
-    containerStyle: () => ({}),
-    content: "container mx-auto px-4 py-10",
-    logo: "font-serif font-bold text-2xl text-gray-900",
-    logoStyle: () => ({}),
-    text: "text-gray-600",
-    link: "text-gray-600 hover:text-gray-900 transition-colors",
-    copyright: "text-sm text-gray-500 mt-8 pt-8 border-t border-gray-200",
-  },
-
-  // TECH (fond clair)
-  tech: {
-    container: "border-t border-gray-200 bg-gray-50",
-    containerStyle: () => ({}),
-    content: "container mx-auto px-4 py-10",
-    logo: "font-mono font-bold text-xl text-gray-900",
-    logoStyle: () => ({}),
-    text: "text-gray-600 text-sm",
-    link: "text-gray-600 hover:text-indigo-600 text-sm transition-colors",
-    copyright: "text-xs text-gray-500 mt-8 pt-8 border-t border-gray-200",
-  },
-
-  // FRESH
-  fresh: {
-    container: "bg-gradient-to-br from-gray-900 to-gray-800 rounded-t-3xl",
-    containerStyle: () => ({}),
-    content: "container mx-auto px-4 py-10",
     logo: "font-bold text-2xl text-white",
     logoStyle: () => ({}),
-    text: "text-gray-400",
-    link: "text-gray-400 hover:text-white transition-colors",
-    copyright: "text-sm text-gray-500 mt-8 pt-8 border-t border-gray-700/50",
+    text: "text-gray-500",
+    textStyle: () => ({}),
+    link: "text-gray-500 hover:text-white transition-colors",
+    linkStyle: () => ({}),
+    copyright: "text-sm text-gray-600 mt-10 pt-8 border-t border-gray-800",
+    copyrightStyle: () => ({}),
+  },
+};
+
+// ============================================================================
+// PAGE BACKGROUND STYLES (pour cohérence globale)
+// ============================================================================
+
+export interface PageStyleConfig {
+  body: string;
+  bodyStyle: (primary: string, secondary: string) => React.CSSProperties;
+  mainContent: string;
+  mainContentStyle: (primary: string, secondary: string) => React.CSSProperties;
+}
+
+export const PAGE_STYLES: Record<SiteTemplate, PageStyleConfig> = {
+  brutal: {
+    body: "bg-white",
+    bodyStyle: () => ({}),
+    mainContent: "bg-white",
+    mainContentStyle: () => ({}),
+  },
+  minimal: {
+    body: "bg-white",
+    bodyStyle: () => ({}),
+    mainContent: "bg-white",
+    mainContentStyle: () => ({}),
+  },
+  magazine: {
+    body: "bg-gray-50",
+    bodyStyle: () => ({}),
+    mainContent: "bg-white",
+    mainContentStyle: () => ({}),
+  },
+  tech: {
+    body: "bg-white",
+    bodyStyle: () => ({}),
+    mainContent: "bg-white",
+    mainContentStyle: () => ({}),
+  },
+  fresh: {
+    body: "bg-black",
+    bodyStyle: () => ({}),
+    mainContent: "bg-gray-950",
+    mainContentStyle: () => ({}),
+  },
+};
+
+// ============================================================================
+// BUTTON STYLES (pour cohérence des CTAs)
+// ============================================================================
+
+export interface ButtonStyleConfig {
+  primary: string;
+  primaryStyle: (primary: string, secondary: string) => React.CSSProperties;
+  secondary: string;
+  secondaryStyle: (primary: string, secondary: string) => React.CSSProperties;
+  ghost: string;
+  ghostStyle: (primary: string, secondary: string) => React.CSSProperties;
+}
+
+export const BUTTON_STYLES: Record<SiteTemplate, ButtonStyleConfig> = {
+  brutal: {
+    primary: "px-6 py-3 font-black uppercase text-sm tracking-wider border-[4px] border-black transition-all hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5",
+    primaryStyle: (primary) => ({
+      backgroundColor: primary,
+      color: isLightColor(primary) ? "#000" : "#FFF",
+    }),
+    secondary: "px-6 py-3 font-black uppercase text-sm tracking-wider bg-white border-[4px] border-black hover:bg-gray-100 transition-all",
+    secondaryStyle: () => ({}),
+    ghost: "px-4 py-2 font-black uppercase text-sm tracking-wider hover:underline decoration-4",
+    ghostStyle: (primary) => ({ textDecorationColor: primary }),
+  },
+  minimal: {
+    primary: "px-6 py-3 text-sm font-normal tracking-wide transition-colors",
+    primaryStyle: (primary) => ({
+      backgroundColor: primary,
+      color: isLightColor(primary) ? "#000" : "#FFF",
+    }),
+    secondary: "px-6 py-3 text-sm font-normal tracking-wide border border-gray-300 hover:border-gray-900 transition-colors",
+    secondaryStyle: () => ({}),
+    ghost: "px-4 py-2 text-sm font-normal tracking-wide text-gray-600 hover:text-gray-900 transition-colors",
+    ghostStyle: () => ({}),
+  },
+  magazine: {
+    primary: "px-6 py-3 text-sm font-bold uppercase tracking-wide transition-all hover:opacity-90",
+    primaryStyle: (primary) => ({
+      backgroundColor: primary,
+      color: isLightColor(primary) ? "#000" : "#FFF",
+    }),
+    secondary: "px-6 py-3 text-sm font-bold uppercase tracking-wide border-2 border-gray-900 hover:bg-gray-900 hover:text-white transition-all",
+    secondaryStyle: () => ({}),
+    ghost: "px-4 py-2 text-sm font-bold uppercase tracking-wide text-gray-700 hover:text-gray-900 transition-colors",
+    ghostStyle: () => ({}),
+  },
+  tech: {
+    primary: "px-6 py-3 text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all",
+    primaryStyle: (primary) => ({
+      backgroundColor: primary,
+      color: isLightColor(primary) ? "#000" : "#FFF",
+    }),
+    secondary: "px-6 py-3 text-sm font-medium rounded-lg border border-gray-300 hover:border-gray-400 transition-all",
+    secondaryStyle: () => ({}),
+    ghost: "px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors",
+    ghostStyle: () => ({}),
+  },
+  fresh: {
+    primary: "px-6 py-3 text-sm font-bold rounded-full transition-all hover:scale-105",
+    primaryStyle: (primary, secondary) => ({
+      background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+      color: isLightColor(primary) ? "#000" : "#FFF",
+      boxShadow: `0 8px 30px ${colorWithOpacity(primary, 0.4)}`,
+    }),
+    secondary: "px-6 py-3 text-sm font-bold rounded-full bg-gray-800 text-white hover:bg-gray-700 transition-all",
+    secondaryStyle: () => ({}),
+    ghost: "px-4 py-2 text-sm font-bold text-gray-400 hover:text-white transition-colors",
+    ghostStyle: () => ({}),
   },
 };
