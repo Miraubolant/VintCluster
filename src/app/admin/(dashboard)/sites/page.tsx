@@ -24,6 +24,7 @@ import {
   getSitesWithStats,
   generateAndUpdateSiteSEO,
   bulkUpdateSiteTemplate,
+  bulkGenerateRandomFavicons,
   deleteSite,
 } from "@/lib/actions/sites";
 import { useBulkProgress } from "@/contexts/BulkProgressContext";
@@ -34,6 +35,7 @@ export default function SitesPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<SiteTemplate>("brutal");
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
+  const [isGeneratingFavicons, setIsGeneratingFavicons] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
@@ -152,6 +154,54 @@ export default function SitesPage() {
     loadSites();
   };
 
+  // Handle bulk favicon generation
+  const handleBulkGenerateFavicons = async () => {
+    if (tableState.selectedIds.length === 0) return;
+
+    const selectedSites = sites.filter((s) => tableState.selectedIds.includes(s.id));
+    resetCancel();
+
+    setIsGeneratingFavicons(true);
+    setProgress({
+      isRunning: true,
+      total: selectedSites.length,
+      completed: 0,
+      currentSite: "Génération des favicons...",
+      errors: [],
+      results: [],
+    });
+
+    const result = await bulkGenerateRandomFavicons(tableState.selectedIds);
+
+    const successCount = result.results.filter(r => r.url).length;
+    const errorMessages = result.results
+      .filter(r => r.error)
+      .map(r => {
+        const site = sites.find(s => s.id === r.siteId);
+        return `${site?.name || r.siteId}: ${r.error}`;
+      });
+
+    setProgress({
+      isRunning: false,
+      total: selectedSites.length,
+      completed: selectedSites.length,
+      currentSite: null,
+      errors: errorMessages,
+      results: [],
+    });
+
+    setIsGeneratingFavicons(false);
+
+    if (errorMessages.length > 0) {
+      toast.warning(`Favicons générés avec ${errorMessages.length} erreur(s)`);
+    } else {
+      toast.success(`${successCount} favicon(s) générés avec succès !`);
+    }
+
+    tableState.clearSelection();
+    loadSites();
+  };
+
   // Handle bulk delete
   const handleBulkDelete = async () => {
     if (tableState.selectedIds.length === 0) return;
@@ -259,9 +309,11 @@ export default function SitesPage() {
           onTemplateChange={setSelectedTemplate}
           onApplyTemplate={handleBulkUpdateTemplate}
           onGenerateSEO={handleBulkGenerateSEO}
+          onGenerateFavicons={handleBulkGenerateFavicons}
           onDelete={() => setIsBulkDeleteOpen(true)}
           isLoading={isApplyingTemplate}
-          isGenerating={progress.isRunning}
+          isGenerating={progress.isRunning && !isGeneratingFavicons}
+          isGeneratingFavicons={isGeneratingFavicons}
         />
       </SelectionToolbar>
 

@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Palette, Trash2 } from "lucide-react";
+import { Sparkles, Palette, Trash2, Wand2 } from "lucide-react";
 import { ToolbarDivider } from "@/components/admin/shared";
 import type { SiteTemplate } from "@/types/database";
 import { TEMPLATES } from "@/types/database";
@@ -19,9 +19,11 @@ interface SiteBulkActionsProps {
   onTemplateChange: (template: SiteTemplate) => void;
   onApplyTemplate: () => void;
   onGenerateSEO: () => void;
+  onGenerateFavicons: () => void;
   onDelete: () => void;
   isLoading?: boolean;
   isGenerating?: boolean;
+  isGeneratingFavicons?: boolean;
 }
 
 export function SiteBulkActions({
@@ -30,11 +32,13 @@ export function SiteBulkActions({
   onTemplateChange,
   onApplyTemplate,
   onGenerateSEO,
+  onGenerateFavicons,
   onDelete,
   isLoading = false,
   isGenerating = false,
+  isGeneratingFavicons = false,
 }: SiteBulkActionsProps) {
-  const isDisabled = isLoading || isGenerating;
+  const isDisabled = isLoading || isGenerating || isGeneratingFavicons;
 
   return (
     <>
@@ -79,6 +83,18 @@ export function SiteBulkActions({
       >
         <Sparkles className="h-4 w-4 mr-1" />
         {isGenerating ? "Génération..." : "Générer SEO"}
+      </Button>
+
+      {/* Generate Random Favicons */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onGenerateFavicons}
+        disabled={isDisabled}
+        className="text-pink-700 border-pink-300 hover:bg-pink-50"
+      >
+        <Wand2 className="h-4 w-4 mr-1" />
+        {isGeneratingFavicons ? "Génération..." : "Favicons aléatoires"}
       </Button>
 
       <ToolbarDivider />
