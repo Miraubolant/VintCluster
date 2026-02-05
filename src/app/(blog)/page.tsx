@@ -8,7 +8,7 @@ import {
   getPublishedArticlesCount,
 } from "@/lib/actions/blog";
 import { ArticleCard, TemplateLinkButton, TemplateEmptyState } from "@/components/blog";
-import { isLightColor, colorWithOpacity } from "@/components/blog/TemplateContext";
+import { isLightColor, colorWithOpacity } from "@/lib/utils/colors";
 import type { SiteTemplate } from "@/types/database";
 
 export async function generateMetadata(): Promise<Metadata> {
